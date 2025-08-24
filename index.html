@@ -99,10 +99,95 @@ const CATS = [
   {key:'Value', label:'Value · 5%', w:0.05, help:'Worth vs. experience and market peers'},
   {key:'Consistency', label:'Consistency · 5%', w:0.05, help:'Reliability across dishes/visits'}
 ];
-const scores = {}; const cfgKey='sheetbest_cfg_v3';
+
+// Per-score descriptors (original wording)
+const DESCR = {
+  Food: {
+    10:"Benchmark cooking; flawless technique; vivid, memorable dishes.",
+    9:"Refined and precise; deep flavor and balance; tiny quibbles only.",
+    8:"Skilled cooking with character; consistent seasoning and texture.",
+    7:"Solid with clear highlights; a few uneven elements.",
+    6:"Competent but lacks spark or definition.",
+    5:"Hit-and-miss; seasoning or textures off at times.",
+    4:"Several technical slips; muddled flavors.",
+    3:"Poor execution; weak balance and control.",
+    2:"Major faults that distract from the dish.",
+    1:"Serious issues; would not order again.",
+    0:"Not served / unable to assess."
+  },
+  Service: {
+    10:"Anticipatory and effortless; personal yet unobtrusive.",
+    9:"Polished pacing and excellent product knowledge.",
+    8:"Attentive and warm; minor slips only.",
+    7:"Friendly, generally on time; a few gaps.",
+    6:"Basic, reactive rather than proactive.",
+    5:"Inconsistent; noticeable waits or misses.",
+    4:"Disjointed; items forgotten or mixed up.",
+    3:"Slow and inattentive throughout.",
+    2:"Frequent errors; little course control.",
+    1:"Unhelpful or dismissive.",
+    0:"Not applicable."
+  },
+  Ambience: {
+    10:"Distinctive, comfortable, and acoustically calm; lighting spot-on.",
+    9:"Stylish and coherent; easy to relax.",
+    8:"Pleasant space with thoughtful details.",
+    7:"Comfortable, a touch generic.",
+    6:"Functional but lacks character.",
+    5:"Crowded/noisy or awkward layout at times.",
+    4:"Lighting or acoustics regularly detract.",
+    3:"Uncomfortable seating or distracting noise.",
+    2:"Poorly maintained or harsh environment.",
+    1:"Actively unpleasant.",
+    0:"Not applicable."
+  },
+  Drinks: {
+    10:"Deep, curated list; smart pairings; fair margins.",
+    9:"Broad, well-priced selection; confident pairing.",
+    8:"Good choice across styles; sensible pricing.",
+    7:"Decent range; a few standouts.",
+    6:"Limited but workable.",
+    5:"Narrow list or uneven pricing.",
+    4:"Short list and weak pairing options.",
+    3:"Few appealing choices.",
+    2:"Overpriced or consistently mismatched.",
+    1:"Poor quality pours.",
+    0:"Not applicable."
+  },
+  Value: {
+    10:"Remarkable value relative to quality and peers.",
+    9:"Well-priced for the experience delivered.",
+    8:"Fair pricing; feels justified.",
+    7:"Slightly above peers but acceptable.",
+    6:"Noticeably priced up for what you get.",
+    5:"Mixed value; some items overpriced.",
+    4:"Regularly overpriced vs peers.",
+    3:"Poor value across much of the menu.",
+    2:"High prices with little return.",
+    1:"Would not return at these prices.",
+    0:"Not applicable."
+  },
+  Consistency: {
+    10:"Rock-solid across dishes and visits.",
+    9:"Minor variance only; highly dependable.",
+    8:"Mostly steady with rare dips.",
+    7:"Some swings between dishes or days.",
+    6:"Uneven week to week.",
+    5:"Hit-and-miss; depends on the order.",
+    4:"Regular lapses in execution.",
+    3:"Frequent inconsistency.",
+    2:"Usually below its best.",
+    1:"Rarely delivers as expected.",
+    0:"Not applicable."
+  }
+};
+
+const scores = {};
+const cfgKey='sheetbest_cfg_v3';
 
 function log(msg){const el=document.getElementById('log'); if(!el) return; el.textContent=(typeof msg==='string')?msg:JSON.stringify(msg,null,2);}
 function n(x){return Number(x)||0;}
+
 function updateOverall(){
   let total=0; CATS.forEach(c=>{ total += n(scores[c.key])*c.w; });
   const o = Math.round(total*10)/10;
@@ -114,24 +199,35 @@ function updateOverall(){
     (o>=7.5) ? 'Excellent; a clear standout' :
     (o>=6.5) ? 'Good with room to grow' : 'Mixed or below';
 }
+
 function mkChips(cat){
   const wrap=document.createElement('div');
   wrap.className='card'; wrap.style.padding='12px'; wrap.style.margin='10px 0';
   wrap.innerHTML=`<div class="grid">
     <div class="g3"><strong>${cat.label}</strong></div>
     <div class="g9 chips" id="chips-${cat.key}"></div>
-    <div class="g12 mut">${cat.help}</div>
+    <div class="g12 mut" id="help-${cat.key}">${cat.help}</div>
+    <div class="g12 mut" id="desc-${cat.key}" style="margin-top:4px"></div>
   </div>`;
   const row=wrap.querySelector('#chips-'+cat.key);
+  const descEl=wrap.querySelector('#desc-'+cat.key);
   for(let i=10;i>=0;i--){
     const b=document.createElement('button');
     b.className='chip'; b.textContent=String(i); b.setAttribute('aria-pressed','false');
-    b.addEventListener('click',()=>{scores[cat.key]=i;[...row.children].forEach(x=>x.setAttribute('aria-pressed','false'));b.setAttribute('aria-pressed','true');updateOverall();});
+    b.addEventListener('click',()=>{
+      scores[cat.key]=i;
+      [...row.children].forEach(x=>x.setAttribute('aria-pressed','false'));
+      b.setAttribute('aria-pressed','true');
+      descEl.textContent = (DESCR[cat.key] && DESCR[cat.key][i]!=null) ? DESCR[cat.key][i] : '';
+      updateOverall();
+    });
     row.appendChild(b);
   }
   return wrap;
 }
+
 function buildCats(){const root=document.getElementById('cats'); CATS.forEach(c=>root.appendChild(mkChips(c)));}
+
 function rowPayload(){
   return [{
     Timestamp:new Date().toISOString(),
@@ -147,6 +243,7 @@ function rowPayload(){
     UserAgent:navigator.userAgent
   }];
 }
+
 function saveCfg(){localStorage.setItem(cfgKey, JSON.stringify({
   endpoint:document.getElementById('endpoint').value.trim(),
   apikey:document.getElementById('apikey').value.trim()
@@ -174,7 +271,7 @@ async function sync(){
     const openDiag=document.getElementById('diag').open; if(openDiag) log({when:'POST',status:r.status,ok:r.ok,response:t});
   }catch(e){ alert('Network error'); log({when:'POST',error:String(e)}); }
 }
-function clearForm(){document.querySelectorAll('input[type=text], textarea').forEach(i=>i.value=''); document.getElementById('date').value=new Date().toISOString().slice(0,10); Object.keys(scores).forEach(k=>delete scores[k]); document.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed','false')); updateOverall(); }
+function clearForm(){document.querySelectorAll('input[type=text], textarea').forEach(i=>i.value=''); document.getElementById('date').value=new Date().toISOString().slice(0,10); Object.keys(scores).forEach(k=>delete scores[k]); document.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed','false')); document.querySelectorAll('[id^=desc-]').forEach(d=>d.textContent=''); updateOverall(); }
 function saveLocal(){ const items=JSON.parse(localStorage.getItem('rr_items')||'[]'); items.push(rowPayload()[0]); localStorage.setItem('rr_items', JSON.stringify(items)); alert('Saved locally ('+items.length+' items)'); }
 
 document.getElementById('date').value=new Date().toISOString().slice(0,10);
