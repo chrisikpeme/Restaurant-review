@@ -163,4 +163,28 @@ async function postSample(){
   const {endpoint,apikey}=JSON.parse(localStorage.getItem(cfgKey)||'{}'); if(!endpoint) return log('Missing endpoint');
   const headers={'Content-Type':'application/json'}; if(apikey){headers['X-API-KEY']=apikey; headers['Authorization']='Bearer '+apikey;}
   const now=new Date();
-  const sample=[{Timestamp:now.toISOString(),Date:now.toISOString().slice(0,10),Restaurant:'Tester Bistro',City:'London',Reviewer:'Chris',Food:9,Service:8,Ambience:8,Drinks:7,Value:7,Consistency:8,Overall:Math.round((9*0.67+8*0.10+]()
+  const sample=[{Timestamp:now.toISOString(),Date:now.toISOString().slice(0,10),Restaurant:'Tester Bistro',City:'London',Reviewer:'Chris',Food:9,Service:8,Ambience:8,Drinks:7,Value:7,Consistency:8,Overall:Math.round((9*0.67+8*0.10+8*0.07+7*0.06+7*0.05+8*0.05)*10)/10,Band:'—',Notes:'Smoke test',UserAgent:navigator.userAgent}];
+  try{const r=await fetch(endpoint,{method:'POST',headers,body:JSON.stringify(sample)}); log({when:'POST sample',status:r.status,ok:r.ok,response:await r.text()});}catch(e){log({when:'POST sample',error:String(e)});}
+}
+async function sync(){
+  const {endpoint,apikey}=JSON.parse(localStorage.getItem(cfgKey)||'{}'); if(!endpoint) return alert('Missing endpoint URL');
+  const headers={'Content-Type':'application/json'}; if(apikey){headers['X-API-KEY']=apikey; headers['Authorization']='Bearer '+apikey;}
+  try{ const r=await fetch(endpoint,{method:'POST',headers,body:JSON.stringify(rowPayload())}); const t=await r.text();
+    if(r.ok){ alert('Synced!'); } else { alert('Sync failed: '+r.status); }
+    const openDiag=document.getElementById('diag').open; if(openDiag) log({when:'POST',status:r.status,ok:r.ok,response:t});
+  }catch(e){ alert('Network error'); log({when:'POST',error:String(e)}); }
+}
+function clearForm(){document.querySelectorAll('input[type=text], textarea').forEach(i=>i.value=''); document.getElementById('date').value=new Date().toISOString().slice(0,10); Object.keys(scores).forEach(k=>delete scores[k]); document.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed','false')); updateOverall(); }
+function saveLocal(){ const items=JSON.parse(localStorage.getItem('rr_items')||'[]'); items.push(rowPayload()[0]); localStorage.setItem('rr_items', JSON.stringify(items)); alert('Saved locally ('+items.length+' items)'); }
+
+document.getElementById('date').value=new Date().toISOString().slice(0,10);
+buildCats(); loadCfg(); updateOverall();
+document.getElementById('saveCfg').addEventListener('click',saveCfg);
+document.getElementById('syncBtn').addEventListener('click',sync);
+document.getElementById('clearForm').addEventListener('click',clearForm);
+document.getElementById('saveLocal').addEventListener('click',saveLocal);
+document.getElementById('testBtn').addEventListener('click',testGet);
+document.getElementById('postBtn').addEventListener('click',postSample);
+</script>
+</body>
+</html>
