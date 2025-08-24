@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Restaurant Review — Pro</title>
+<title>Restaurant-Review-Ometer</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -13,7 +13,8 @@
   body{margin:0;background:var(--bg);color:var(--ink);font:16px system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial}
   .wrap{max-width:1100px;margin:24px auto;padding:0 16px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
-  h1{margin:0 0 6px;font-size:24px} h2{margin:18px 0 8px;font-size:16px;color:var(--mut)}
+  h1{margin:0 0 6px;font-size:24px}
+  h2{margin:18px 0 8px;font-size:16px;color:var(--mut)}
   label{display:block;margin:8px 0 4px}
   input,textarea,button{font:inherit}
   input,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--chip);color:var(--ink)}
@@ -21,8 +22,11 @@
   .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
   .g12{grid-column:span 12}.g8{grid-column:span 8}.g6{grid-column:span 6}.g4{grid-column:span 4}.g3{grid-column:span 3}
   @media(max-width:860px){.g8,.g6,.g4,.g3{grid-column:span 12}}
-  .chips{display:flex;flex-wrap:wrap;gap:6px}
-  .chip{min-width:40px;text-align:center;padding:8px 0;border:1px solid var(--line);border-radius:10px;background:var(--chip);color:var(--ink);cursor:pointer;transition:.15s}
+  .chips{display:flex;gap:6px;overflow-x:auto;padding:4px 2px 8px 2px;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+  .chips::-webkit-scrollbar{height:8px}
+  .chips::-webkit-scrollbar-thumb{background:#1c2a3f;border-radius:8px}
+  .chip{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;min-width:42px;height:38px;
+        border:1px solid var(--line);border-radius:10px;background:var(--chip);color:var(--ink);cursor:pointer;transition:.15s}
   .chip:hover{transform:translateY(-1px)}
   .chip[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset;background:#0e1b16}
   .mut{color:var(--mut);font-size:14px}
@@ -30,15 +34,15 @@
   button{border:1px solid var(--line);background:var(--chip);color:var(--ink);padding:10px 14px;border-radius:10px;cursor:pointer}
   button.primary{border-color:var(--accent)}
   progress{width:100%;height:12px}
-  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#0f1f16;border:1px solid #183f31;color:#c7ffdf;padding:10px 14px;border-radius:10px;opacity:0;transition:.2s}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#0f1f16;border:1px solid #183f31;
+         color:#c7ffdf;padding:10px 14px;border-radius:10px;opacity:0;transition:.2s}
   .toast.show{opacity:1}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="card">
-    <h1>Restaurant Review — <span class="mut">best-in-class scoring</span></h1>
-    <div class="mut">Tap scores 0–10 for each category. Food is weighted most heavily (67%).</div>
+    <h1>Restaurant-Review-Ometer</h1>
 
     <div class="grid" style="margin-top:10px">
       <div class="g6"><label>Restaurant</label><input id="restaurant" placeholder="e.g., Test Bistro"></div>
@@ -54,18 +58,15 @@
     <h2>Overall result</h2>
     <div class="grid">
       <div class="g8">
-        <div class="row"><strong>Weighted Overall:</strong>
+        <div class="row">
+          <strong>Weighted Overall:</strong>
           <span id="overall" style="margin-left:6px">0.0</span> / 10 — <span id="band" class="mut">—</span>
         </div>
         <progress id="bar" max="10" value="0"></progress>
         <div class="mut">Banding: 9.5+ Elite · 8.5–9.4 Outstanding · 7.5–8.4 Excellent · 6.5–7.4 Good · else Mixed/below.</div>
       </div>
-      <div class="g4">
-        <div class="row">
-          <button id="saveLocal">Save to browser</button>
-          <button id="clearForm">Clear form</button>
-          <button id="syncBtn" class="primary">Save + sync to Sheet</button>
-        </div>
+      <div class="g4" style="display:flex;align-items:flex-end">
+        <button id="syncBtn" class="primary" style="width:100%">Submit review</button>
       </div>
     </div>
   </div>
@@ -74,10 +75,10 @@
 <div id="toast" class="toast">Synced!</div>
 
 <script>
-/* ======= HARD-CODED ENDPOINT (works in every browser) ======= */
+/* ======= HARD-CODED ENDPOINT ======= */
 const ENDPOINT = 'https://api.sheetbest.com/sheets/9707a268-edd0-4f09-afe3-3f430786e8e2';
 const APIKEY   = ''; // keep '' because your Sheet.best is "Use API = No"
-/* ============================================================ */
+/* =================================== */
 
 const CATS = [
   {key:'Food', label:'Food · 67%', w:0.67, help:'Depth, clarity, seasoning, execution, balance'},
@@ -112,6 +113,7 @@ function updateOverall(){
     (o>=7.5) ? 'Excellent; a clear standout' :
     (o>=6.5) ? 'Good with room to grow' : 'Mixed or below';
 }
+
 function mkChips(cat){
   const wrap=document.createElement('div');
   wrap.className='card'; wrap.style.padding='12px'; wrap.style.margin='10px 0';
@@ -137,6 +139,7 @@ function mkChips(cat){
   }
   return wrap;
 }
+
 function buildCats(){const root=$('cats'); CATS.forEach(c=>root.appendChild(mkChips(c)));}
 
 function rowPayload(){
@@ -166,27 +169,10 @@ async function sync(){
   }catch(e){ alert('Network error'); }
 }
 
-function clearForm(){
-  document.querySelectorAll('input[type=text], textarea').forEach(i=>i.value='');
-  $('date').value=new Date().toISOString().slice(0,10);
-  Object.keys(scores).forEach(k=>delete scores[k]);
-  document.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed','false'));
-  document.querySelectorAll('[id^=desc-]').forEach(d=>d.textContent='');
-  updateOverall();
-}
-function saveLocal(){
-  const items=JSON.parse(localStorage.getItem('rr_items')||'[]');
-  items.push(rowPayload()[0]);
-  localStorage.setItem('rr_items', JSON.stringify(items));
-  toast('Saved locally ('+items.length+')');
-}
-
 /* Init */
 $('date').value=new Date().toISOString().slice(0,10);
 buildCats(); updateOverall();
 $('syncBtn').addEventListener('click', sync);
-$('clearForm').addEventListener('click', clearForm);
-$('saveLocal').addEventListener('click', saveLocal);
 </script>
 </body>
 </html>
