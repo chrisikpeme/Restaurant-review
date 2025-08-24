@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Restaurant Review – Scoring App (Sheet.best Debug)</title>
+<style>
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;margin:0;background:#0f172a;color:#e5e7eb}
+  .wrap{max-width:960px;margin:20px auto;padding:0 14px}
+  .card{background:#0b1224;border:1px solid #1f2937;border-radius:14px;padding:18px}
+  h1{margin:0 0 10px;font-size:22px}
+  label{display:block;margin:6px 0 4px}
+  input,textarea,button{font:inherit}
+  input,textarea{width:100%;padding:10px;border:1px solid #374151;border-radius:10px;background:#0a1122;color:#e5e7eb}
+  textarea{min-height:70px}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+  button{border:1px solid #374151;background:#0a1122;color:#e5e7eb;padding:10px 14px;border-radius:10px;cursor:pointer}
+  .muted{color:#9ca3af}
+  pre{white-space:pre-wrap;background:#0a1122;border:1px solid #374151;border-radius:10px;padding:10px;overflow:auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>Restaurant Review – Scoring App <span class="muted">Sheet.best Debug</span></h1>
+
+    <label>Restaurant</label><input id="restaurant">
+    <label>City</label><input id="city">
+    <label>Date</label><input id="date" type="date">
+    <label>Reviewer</label><input id="reviewer">
+    <label>Notes</label><textarea id="notes"></textarea>
+
+    <div class="toolbar">
+      <button id="syncBtn">Save + sync to Sheet</button>
+      <button id="testBtn">Test endpoint (GET)</button>
+      <button id="saveCfg">Save config</button>
+    </div>
+
+    <label>Sheet.best Endpoint URL</label>
+    <input id="endpoint" placeholder="https://api.sheetbest.com/sheets/...">
+    <label>API key (optional)</label>
+    <input id="apikey">
+
+    <div style="margin-top:12px">
+      <div class="muted">Headers required in Google Sheet row 1: <code>Timestamp, Date, Restaurant, City, Reviewer, Food, Service, Ambience, Drinks, Value, Consistency, Overall, Band, Notes, UserAgent</code></div>
+    </div>
+
+    <div style="margin-top:12px">
+      <label>Debug output</label>
+      <pre id="log">—</pre>
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById('date').value=new Date().toISOString().slice(0,10);
+function log(msg){const el=document.getElementById('log');el.textContent=(typeof msg==='string')?msg:JSON.stringify(msg,null,2);}
+const cfgKey='sheetbest_cfg_debug';
+function saveCfg(){localStorage.setItem(cfgKey, JSON.stringify({endpoint:document.getElementById('endpoint').value.trim(), apikey:document.getElementById('apikey').value.trim()}));log('Config saved');}
+function loadCfg(){try{const c=JSON.parse(localStorage.getItem(cfgKey)||'{}');document.getElementById('endpoint').value=c.endpoint||'';document.getElementById('apikey').value=c.apikey||'';}catch(e){}}
+loadCfg();
+function gatherRow(){return{Timestamp:new Date().toISOString(),Date:document.getElementById('date').value,Restaurant:document.getElementById('restaurant').value.trim(),City:document.getElementById('city').value.trim(),Reviewer:document.getElementById('reviewer').value.trim(),Notes:document.getElementById('notes').value.trim(),UserAgent:navigator.userAgent};}
+async function sync(){const cfg=JSON.parse(localStorage.getItem(cfgKey)||'{}');if(!cfg.endpoint)return log('Missing endpoint');const headers={'Content-Type':'application/json'};if(cfg.apikey){headers['X-API-KEY']=cfg.apikey;headers['Authorization']='Bearer '+cfg.apikey;}const body=[gatherRow()];try{const res=await fetch(cfg.endpoint,{method:'POST',headers,body:JSON.stringify(body)});const text=await res.text();log({when:'POST',status:res.status,ok:res.ok,response:text});}catch(e){log({when:'POST',error:String(e)});}}
+async function testGet(){const cfg=JSON.parse(localStorage.getItem(cfgKey)||'{}');if(!cfg.endpoint)return log('Missing endpoint');try{const res=await fetch(cfg.endpoint);const text=await res.text();log({when:'GET',status:res.status,ok:res.ok,response:text.slice(0,500)});}catch(e){log({when:'GET',error:String(e)});}}
+document.getElementById('syncBtn').addEventListener('click',sync);
+document.getElementById('testBtn').addEventListener('click',testGet);
+document.getElementById('saveCfg').addEventListener('click',saveCfg);
+</script>
+</body>
+</html>
