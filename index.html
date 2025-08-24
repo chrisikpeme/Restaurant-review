@@ -30,6 +30,8 @@
   pre{white-space:pre-wrap;background:#0a1122;border:1px solid var(--line);border-radius:10px;padding:10px;overflow:auto}
   details{margin-top:10px}
   details>summary{cursor:pointer;color:var(--mut)}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#0f1f16;border:1px solid #183f31;color:#c7ffdf;padding:10px 14px;border-radius:10px;opacity:0;transition:.2s}
+  .toast.show{opacity:1}
 </style>
 </head>
 <body>
@@ -62,35 +64,45 @@
         <div class="row">
           <button id="saveLocal">Save to browser</button>
           <button id="clearForm">Clear form</button>
+          <button id="syncBtn" class="primary">Save + sync to Sheet</button>
         </div>
       </div>
     </div>
 
-    <h2>Configuration</h2>
-    <div class="grid">
-      <div class="g8"><label>Sheet.best Endpoint URL</label><input id="endpoint" placeholder="https://api.sheetbest.com/sheets/…"></div>
-      <div class="g4"><label>API key (optional)</label><input id="apikey" placeholder="only if your connection requires it"></div>
-    </div>
-    <div class="row">
-      <button id="saveCfg">Save config</button>
-      <button id="syncBtn" class="primary">Save + sync to Sheet</button>
-    </div>
-    <div class="mut" style="margin-top:8px">
-      Your Google Sheet must have headers in row 1: <code>Timestamp, Date, Restaurant, City, Reviewer, Food, Service, Ambience, Drinks, Value, Consistency, Overall, Band, Notes, UserAgent</code>
-    </div>
-
-    <details id="diag">
-      <summary>Diagnostics (optional)</summary>
-      <div class="row" style="margin-top:8px">
-        <button id="testBtn">Test endpoint (GET)</button>
-        <button id="postBtn">POST sample row</button>
+    <!-- Config & diagnostics (hidden unless ?debug=1) -->
+    <div id="configBlock" style="display:none">
+      <h2>Configuration</h2>
+      <div class="grid">
+        <div class="g8"><label>Sheet.best Endpoint URL</label><input id="endpoint"></div>
+        <div class="g4"><label>API key (optional)</label><input id="apikey" placeholder="only if your connection requires it"></div>
       </div>
-      <pre id="log">—</pre>
-    </details>
+      <div class="row">
+        <button id="saveCfg">Save config</button>
+      </div>
+      <details id="diag">
+        <summary>Diagnostics (optional)</summary>
+        <div class="row" style="margin-top:8px">
+          <button id="testBtn">Test endpoint (GET)</button>
+          <button id="postBtn">POST sample row</button>
+        </div>
+        <pre id="log">—</pre>
+      </details>
+      <div class="mut" style="margin-top:8px">
+        Your Google Sheet must have headers in row 1: <code>Timestamp, Date, Restaurant, City, Reviewer, Food, Service, Ambience, Drinks, Value, Consistency, Overall, Band, Notes, UserAgent</code>
+      </div>
+    </div>
   </div>
 </div>
 
+<div id="toast" class="toast">Synced!</div>
+
 <script>
+/* ======= FINAL SETTINGS ======= */
+const DEFAULT_ENDPOINT = 'https://api.sheetbest.com/sheets/9707a268-edd0-4f09-afe3-3f430786e8e2';
+const DEFAULT_APIKEY   = '';   // keep '' since your Sheet.best is "Use API = No"
+/* ============================== */
+
+const DEBUG = new URLSearchParams(location.search).get('debug') === '1';
 const CATS = [
   {key:'Food', label:'Food · 67%', w:0.67, help:'Depth, clarity, seasoning, execution, balance'},
   {key:'Service', label:'Service · 10%', w:0.10, help:'Warmth, pace, accuracy, product knowledge'},
@@ -99,107 +111,32 @@ const CATS = [
   {key:'Value', label:'Value · 5%', w:0.05, help:'Worth vs. experience and market peers'},
   {key:'Consistency', label:'Consistency · 5%', w:0.05, help:'Reliability across dishes/visits'}
 ];
-
 // Per-score descriptors (original wording)
 const DESCR = {
-  Food: {
-    10:"Benchmark cooking; flawless technique; vivid, memorable dishes.",
-    9:"Refined and precise; deep flavor and balance; tiny quibbles only.",
-    8:"Skilled cooking with character; consistent seasoning and texture.",
-    7:"Solid with clear highlights; a few uneven elements.",
-    6:"Competent but lacks spark or definition.",
-    5:"Hit-and-miss; seasoning or textures off at times.",
-    4:"Several technical slips; muddled flavors.",
-    3:"Poor execution; weak balance and control.",
-    2:"Major faults that distract from the dish.",
-    1:"Serious issues; would not order again.",
-    0:"Not served / unable to assess."
-  },
-  Service: {
-    10:"Anticipatory and effortless; personal yet unobtrusive.",
-    9:"Polished pacing and excellent product knowledge.",
-    8:"Attentive and warm; minor slips only.",
-    7:"Friendly, generally on time; a few gaps.",
-    6:"Basic, reactive rather than proactive.",
-    5:"Inconsistent; noticeable waits or misses.",
-    4:"Disjointed; items forgotten or mixed up.",
-    3:"Slow and inattentive throughout.",
-    2:"Frequent errors; little course control.",
-    1:"Unhelpful or dismissive.",
-    0:"Not applicable."
-  },
-  Ambience: {
-    10:"Distinctive, comfortable, and acoustically calm; lighting spot-on.",
-    9:"Stylish and coherent; easy to relax.",
-    8:"Pleasant space with thoughtful details.",
-    7:"Comfortable, a touch generic.",
-    6:"Functional but lacks character.",
-    5:"Crowded/noisy or awkward layout at times.",
-    4:"Lighting or acoustics regularly detract.",
-    3:"Uncomfortable seating or distracting noise.",
-    2:"Poorly maintained or harsh environment.",
-    1:"Actively unpleasant.",
-    0:"Not applicable."
-  },
-  Drinks: {
-    10:"Deep, curated list; smart pairings; fair margins.",
-    9:"Broad, well-priced selection; confident pairing.",
-    8:"Good choice across styles; sensible pricing.",
-    7:"Decent range; a few standouts.",
-    6:"Limited but workable.",
-    5:"Narrow list or uneven pricing.",
-    4:"Short list and weak pairing options.",
-    3:"Few appealing choices.",
-    2:"Overpriced or consistently mismatched.",
-    1:"Poor quality pours.",
-    0:"Not applicable."
-  },
-  Value: {
-    10:"Remarkable value relative to quality and peers.",
-    9:"Well-priced for the experience delivered.",
-    8:"Fair pricing; feels justified.",
-    7:"Slightly above peers but acceptable.",
-    6:"Noticeably priced up for what you get.",
-    5:"Mixed value; some items overpriced.",
-    4:"Regularly overpriced vs peers.",
-    3:"Poor value across much of the menu.",
-    2:"High prices with little return.",
-    1:"Would not return at these prices.",
-    0:"Not applicable."
-  },
-  Consistency: {
-    10:"Rock-solid across dishes and visits.",
-    9:"Minor variance only; highly dependable.",
-    8:"Mostly steady with rare dips.",
-    7:"Some swings between dishes or days.",
-    6:"Uneven week to week.",
-    5:"Hit-and-miss; depends on the order.",
-    4:"Regular lapses in execution.",
-    3:"Frequent inconsistency.",
-    2:"Usually below its best.",
-    1:"Rarely delivers as expected.",
-    0:"Not applicable."
-  }
+  Food: {10:"Benchmark cooking; flawless technique; vivid, memorable dishes.",9:"Refined and precise; deep flavor and balance; tiny quibbles only.",8:"Skilled cooking with character; consistent seasoning and texture.",7:"Solid with clear highlights; a few uneven elements.",6:"Competent but lacks spark or definition.",5:"Hit-and-miss; seasoning or textures off at times.",4:"Several technical slips; muddled flavors.",3:"Poor execution; weak balance and control.",2:"Major faults that distract from the dish.",1:"Serious issues; would not order again.",0:"Not served / unable to assess."},
+  Service: {10:"Anticipatory and effortless; personal yet unobtrusive.",9:"Polished pacing and excellent product knowledge.",8:"Attentive and warm; minor slips only.",7:"Friendly, generally on time; a few gaps.",6:"Basic, reactive rather than proactive.",5:"Inconsistent; noticeable waits or misses.",4:"Disjointed; items forgotten or mixed up.",3:"Slow and inattentive throughout.",2:"Frequent errors; little course control.",1:"Unhelpful or dismissive.",0:"Not applicable."},
+  Ambience: {10:"Distinctive, comfortable, and acoustically calm; lighting spot-on.",9:"Stylish and coherent; easy to relax.",8:"Pleasant space with thoughtful details.",7:"Comfortable, a touch generic.",6:"Functional but lacks character.",5:"Crowded/noisy or awkward layout at times.",4:"Lighting or acoustics regularly detract.",3:"Uncomfortable seating or distracting noise.",2:"Poorly maintained or harsh environment.",1:"Actively unpleasant.",0:"Not applicable."},
+  Drinks: {10:"Deep, curated list; smart pairings; fair margins.",9:"Broad, well-priced selection; confident pairing.",8:"Good choice across styles; sensible pricing.",7:"Decent range; a few standouts.",6:"Limited but workable.",5:"Narrow list or uneven pricing.",4:"Short list and weak pairing options.",3:"Few appealing choices.",2:"Overpriced or consistently mismatched.",1:"Poor quality pours.",0:"Not applicable."},
+  Value: {10:"Remarkable value relative to quality and peers.",9:"Well-priced for the experience delivered.",8:"Fair pricing; feels justified.",7:"Slightly above peers but acceptable.",6:"Noticeably priced up for what you get.",5:"Mixed value; some items overpriced.",4:"Regularly overpriced vs peers.",3:"Poor value across much of the menu.",2:"High prices with little return.",1:"Would not return at these prices.",0:"Not applicable."},
+  Consistency: {10:"Rock-solid across dishes and visits.",9:"Minor variance only; highly dependable.",8:"Mostly steady with rare dips.",7:"Some swings between dishes or days.",6:"Uneven week to week.",5:"Hit-and-miss; depends on the order.",4:"Regular lapses in execution.",3:"Frequent inconsistency.",2:"Usually below its best.",1:"Rarely delivers as expected.",0:"Not applicable."}
 };
-
 const scores = {};
 const cfgKey='sheetbest_cfg_v3';
-
-function log(msg){const el=document.getElementById('log'); if(!el) return; el.textContent=(typeof msg==='string')?msg:JSON.stringify(msg,null,2);}
+function $(id){return document.getElementById(id);}
+function log(msg){const el=$('log'); if(!el) return; el.textContent=(typeof msg==='string')?msg:JSON.stringify(msg,null,2);}
+function toast(msg){const t=$('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1600);}
 function n(x){return Number(x)||0;}
-
 function updateOverall(){
   let total=0; CATS.forEach(c=>{ total += n(scores[c.key])*c.w; });
   const o = Math.round(total*10)/10;
-  document.getElementById('overall').textContent=o.toFixed(1);
-  document.getElementById('bar').value=o;
-  document.getElementById('band').textContent =
+  $('overall').textContent=o.toFixed(1);
+  $('bar').value=o;
+  $('band').textContent =
     (o>=9.5) ? 'Elite by any measure' :
     (o>=8.5) ? 'Outstanding; destination dining' :
     (o>=7.5) ? 'Excellent; a clear standout' :
     (o>=6.5) ? 'Good with room to grow' : 'Mixed or below';
 }
-
 function mkChips(cat){
   const wrap=document.createElement('div');
   wrap.className='card'; wrap.style.padding='12px'; wrap.style.margin='10px 0';
@@ -225,63 +162,90 @@ function mkChips(cat){
   }
   return wrap;
 }
-
-function buildCats(){const root=document.getElementById('cats'); CATS.forEach(c=>root.appendChild(mkChips(c)));}
+function buildCats(){const root=$('cats'); CATS.forEach(c=>root.appendChild(mkChips(c)));}
 
 function rowPayload(){
   return [{
     Timestamp:new Date().toISOString(),
-    Date:document.getElementById('date').value,
-    Restaurant:document.getElementById('restaurant').value.trim(),
-    City:document.getElementById('city').value.trim(),
-    Reviewer:document.getElementById('reviewer').value.trim(),
+    Date:$('date').value,
+    Restaurant:$('restaurant').value.trim(),
+    City:$('city').value.trim(),
+    Reviewer:$('reviewer').value.trim(),
     Food:n(scores.Food), Service:n(scores.Service), Ambience:n(scores.Ambience),
     Drinks:n(scores.Drinks), Value:n(scores.Value), Consistency:n(scores.Consistency),
-    Overall:Number(document.getElementById('overall').textContent),
-    Band:document.getElementById('band').textContent,
-    Notes:document.getElementById('notes').value.trim(),
+    Overall:Number($('overall').textContent),
+    Band:$('band').textContent,
+    Notes:$('notes').value.trim(),
     UserAgent:navigator.userAgent
   }];
 }
 
-function saveCfg(){localStorage.setItem(cfgKey, JSON.stringify({
-  endpoint:document.getElementById('endpoint').value.trim(),
-  apikey:document.getElementById('apikey').value.trim()
-})); alert('Config saved');}
-function loadCfg(){try{const c=JSON.parse(localStorage.getItem(cfgKey)||'{}');
-  document.getElementById('endpoint').value=c.endpoint||''; document.getElementById('apikey').value=c.apikey||'';
-}catch(e){}}
-
+/* ===== Debug helpers (shown only with ?debug=1) ===== */
+function saveCfg(){ localStorage.setItem(cfgKey, JSON.stringify({
+  endpoint:$('endpoint').value.trim(),
+  apikey:$('apikey').value.trim()
+})); log('Config saved');}
 async function testGet(){
-  const {endpoint}=JSON.parse(localStorage.getItem(cfgKey)||'{}'); if(!endpoint) return log('Missing endpoint');
+  const endpoint = ($('endpoint').value || DEFAULT_ENDPOINT).trim();
+  if(!endpoint) return log('Missing endpoint');
   try{ const r=await fetch(endpoint); const t=await r.text(); log({when:'GET',status:r.status,ok:r.ok,response:t.slice(0,600)}); }catch(e){ log({when:'GET',error:String(e)}); }
 }
 async function postSample(){
-  const {endpoint,apikey}=JSON.parse(localStorage.getItem(cfgKey)||'{}'); if(!endpoint) return log('Missing endpoint');
+  const endpoint = ($('endpoint').value || DEFAULT_ENDPOINT).trim();
+  const apikey   = ($('apikey').value   || DEFAULT_APIKEY).trim();
+  if(!endpoint) return log('Missing endpoint');
   const headers={'Content-Type':'application/json'}; if(apikey){headers['X-API-KEY']=apikey; headers['Authorization']='Bearer '+apikey;}
   const now=new Date();
   const sample=[{Timestamp:now.toISOString(),Date:now.toISOString().slice(0,10),Restaurant:'Tester Bistro',City:'London',Reviewer:'Chris',Food:9,Service:8,Ambience:8,Drinks:7,Value:7,Consistency:8,Overall:Math.round((9*0.67+8*0.10+8*0.07+7*0.06+7*0.05+8*0.05)*10)/10,Band:'—',Notes:'Smoke test',UserAgent:navigator.userAgent}];
   try{const r=await fetch(endpoint,{method:'POST',headers,body:JSON.stringify(sample)}); log({when:'POST sample',status:r.status,ok:r.ok,response:await r.text()});}catch(e){log({when:'POST sample',error:String(e)});}
 }
-async function sync(){
-  const {endpoint,apikey}=JSON.parse(localStorage.getItem(cfgKey)||'{}'); if(!endpoint) return alert('Missing endpoint URL');
-  const headers={'Content-Type':'application/json'}; if(apikey){headers['X-API-KEY']=apikey; headers['Authorization']='Bearer '+apikey;}
-  try{ const r=await fetch(endpoint,{method:'POST',headers,body:JSON.stringify(rowPayload())}); const t=await r.text();
-    if(r.ok){ alert('Synced!'); } else { alert('Sync failed: '+r.status); }
-    const openDiag=document.getElementById('diag').open; if(openDiag) log({when:'POST',status:r.status,ok:r.ok,response:t});
-  }catch(e){ alert('Network error'); log({when:'POST',error:String(e)}); }
-}
-function clearForm(){document.querySelectorAll('input[type=text], textarea').forEach(i=>i.value=''); document.getElementById('date').value=new Date().toISOString().slice(0,10); Object.keys(scores).forEach(k=>delete scores[k]); document.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed','false')); document.querySelectorAll('[id^=desc-]').forEach(d=>d.textContent=''); updateOverall(); }
-function saveLocal(){ const items=JSON.parse(localStorage.getItem('rr_items')||'[]'); items.push(rowPayload()[0]); localStorage.setItem('rr_items', JSON.stringify(items)); alert('Saved locally ('+items.length+' items)'); }
+/* =================================================== */
 
-document.getElementById('date').value=new Date().toISOString().slice(0,10);
-buildCats(); loadCfg(); updateOverall();
-document.getElementById('saveCfg').addEventListener('click',saveCfg);
-document.getElementById('syncBtn').addEventListener('click',sync);
-document.getElementById('clearForm').addEventListener('click',clearForm);
-document.getElementById('saveLocal').addEventListener('click',saveLocal);
-document.getElementById('testBtn').addEventListener('click',testGet);
-document.getElementById('postBtn').addEventListener('click',postSample);
+async function sync(){
+  const endpoint = DEBUG ? (($('endpoint').value || DEFAULT_ENDPOINT).trim()) : DEFAULT_ENDPOINT;
+  const apikey   = DEBUG ? (($('apikey').value   || DEFAULT_APIKEY).trim())   : DEFAULT_APIKEY;
+  if(!endpoint){ alert('Missing endpoint URL'); return; }
+  const headers={'Content-Type':'application/json'}; if(apikey){headers['X-API-KEY']=apikey; headers['Authorization']='Bearer '+apikey;}
+  try{
+    const r=await fetch(endpoint,{method:'POST',headers,body:JSON.stringify(rowPayload())});
+    const t=await r.text();
+    if(r.ok){ toast('Synced!'); } else { alert('Sync failed: '+r.status); }
+    if(DEBUG){ log({when:'POST',status:r.status,ok:r.ok,response:t}); }
+  }catch(e){ alert('Network error'); if(DEBUG){ log({when:'POST',error:String(e)}); } }
+}
+
+function clearForm(){
+  document.querySelectorAll('input[type=text], textarea').forEach(i=>i.value='');
+  $('date').value=new Date().toISOString().slice(0,10);
+  Object.keys(scores).forEach(k=>delete scores[k]);
+  document.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed','false'));
+  document.querySelectorAll('[id^=desc-]').forEach(d=>d.textContent='');
+  updateOverall();
+}
+function saveLocal(){
+  const items=JSON.parse(localStorage.getItem('rr_items')||'[]');
+  items.push(rowPayload()[0]);
+  localStorage.setItem('rr_items', JSON.stringify(items));
+  toast('Saved locally ('+items.length+')');
+}
+
+/* Init */
+$('date').value=new Date().toISOString().slice(0,10);
+buildCats(); updateOverall();
+
+/* Show debug UI if requested */
+if(DEBUG){
+  const cfg=$('configBlock'); if(cfg) cfg.style.display='';
+  $('endpoint').value = DEFAULT_ENDPOINT;
+  $('apikey').value   = DEFAULT_APIKEY;
+  $('saveCfg')?.addEventListener('click', saveCfg);
+  $('testBtn')?.addEventListener('click', testGet);
+  $('postBtn')?.addEventListener('click', postSample);
+}
+
+$('syncBtn').addEventListener('click', sync);
+$('clearForm').addEventListener('click', clearForm);
+$('saveLocal').addEventListener('click', saveLocal);
 </script>
 </body>
 </html>
