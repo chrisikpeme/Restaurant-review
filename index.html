@@ -3,40 +3,47 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Restaurant Review — Sheet.best</title>
+<title>Restaurant Review — Pro</title>
 <style>
-  :root{--bg:#0f172a;--card:#0b1224;--muted:#94a3b8;--text:#e5e7eb;--line:#243244;--ok:#10b981}
-  body{margin:0;background:var(--bg);color:var(--text);font:16px system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
-  .wrap{max-width:1000px;margin:20px auto;padding:0 14px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
-  h1{margin:0 0 8px;font-size:22px} h2{margin:18px 0 8px;font-size:16px;color:var(--muted)}
+  :root{--bg:#0b1022;--card:#0f172a;--ink:#e6edf3;--mut:#9fb0c3;--line:#213047;--accent:#10b981;--chip:#0a1122}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial}
+  .wrap{max-width:1100px;margin:24px auto;padding:0 16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  h1{margin:0 0 6px;font-size:24px} h2{margin:18px 0 8px;font-size:16px;color:var(--mut)}
   label{display:block;margin:8px 0 4px}
   input,textarea,button{font:inherit}
-  input,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:#0a1122;color:var(--text)}
-  textarea{min-height:80px}
-  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:10px}
+  input,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--chip);color:var(--ink)}
+  textarea{min-height:84px}
+  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
   .g12{grid-column:span 12}.g8{grid-column:span 8}.g6{grid-column:span 6}.g4{grid-column:span 4}.g3{grid-column:span 3}
-  @media(max-width:820px){.g8,.g6,.g4,.g3{grid-column:span 12}}
+  @media(max-width:860px){.g8,.g6,.g4,.g3{grid-column:span 12}}
   .chips{display:flex;flex-wrap:wrap;gap:6px}
-  .chip{min-width:38px;text-align:center;padding:8px 0;border:1px solid var(--line);border-radius:10px;background:#0a1122;color:var(--text);cursor:pointer}
-  .chip[aria-pressed="true"]{border-color:var(--ok);background:#0f1f18}
-  .muted{color:var(--muted);font-size:14px}
+  .chip{min-width:40px;text-align:center;padding:8px 0;border:1px solid var(--line);border-radius:10px;background:var(--chip);color:var(--ink);cursor:pointer;transition:.15s}
+  .chip:hover{transform:translateY(-1px)}
+  .chip[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset;background:#0e1b16}
+  .mut{color:var(--mut);font-size:14px}
   .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
-  button{border:1px solid var(--line);background:#0a1122;color:var(--text);padding:10px 14px;border-radius:10px;cursor:pointer}
+  button{border:1px solid var(--line);background:var(--chip);color:var(--ink);padding:10px 14px;border-radius:10px;cursor:pointer}
+  button.primary{border-color:var(--accent)}
   progress{width:100%;height:12px}
   pre{white-space:pre-wrap;background:#0a1122;border:1px solid var(--line);border-radius:10px;padding:10px;overflow:auto}
+  details{margin-top:10px}
+  details>summary{cursor:pointer;color:var(--mut)}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="card">
-    <h1>Restaurant Review — <span class="muted">Sheet.best</span></h1>
-    <div class="grid">
+    <h1>Restaurant Review — <span class="mut">best-in-class scoring</span></h1>
+    <div class="mut">Tap scores 0–10 for each category. Food is weighted most heavily (67%).</div>
+
+    <div class="grid" style="margin-top:10px">
       <div class="g6"><label>Restaurant</label><input id="restaurant" placeholder="e.g., Test Bistro"></div>
       <div class="g3"><label>City</label><input id="city" placeholder="City"></div>
       <div class="g3"><label>Date</label><input id="date" type="date"></div>
       <div class="g6"><label>Reviewer</label><input id="reviewer" placeholder="Your name"></div>
-      <div class="g6"><label>General notes (optional)</label><textarea id="notes" placeholder="Highlights, weaknesses, dishes to remember…"></textarea></div>
+      <div class="g6"><label>Notes</label><textarea id="notes" placeholder="Highlights, weaknesses, dishes to remember…"></textarea></div>
     </div>
 
     <h2>Categories</h2>
@@ -45,9 +52,11 @@
     <h2>Overall result</h2>
     <div class="grid">
       <div class="g8">
-        <div class="row"><strong>Weighted Overall (0–10):</strong> <span id="overall" style="margin-left:6px">0.0</span> — <span id="band" class="muted">—</span></div>
+        <div class="row"><strong>Weighted Overall:</strong>
+          <span id="overall" style="margin-left:6px">0.0</span> / 10 — <span id="band" class="mut">—</span>
+        </div>
         <progress id="bar" max="10" value="0"></progress>
-        <div class="muted">Overall = Σ(score × weight). Food is 0.67 of the total.</div>
+        <div class="mut">Banding: 9.5+ Elite · 8.5–9.4 Outstanding · 7.5–8.4 Excellent · 6.5–7.4 Good · else Mixed/below.</div>
       </div>
       <div class="g4">
         <div class="row">
@@ -64,56 +73,38 @@
     </div>
     <div class="row">
       <button id="saveCfg">Save config</button>
-      <button id="testBtn">Test endpoint (GET)</button>
-      <button id="syncBtn">Save + sync to Sheet</button>
+      <button id="syncBtn" class="primary">Save + sync to Sheet</button>
     </div>
-    <div style="margin-top:10px" class="muted">
-      Headers expected in your Google Sheet (row 1): <code>Timestamp, Date, Restaurant, City, Reviewer, Food, Service, Ambience, Drinks, Value, Consistency, Overall, Band, Notes, UserAgent</code>
+    <div class="mut" style="margin-top:8px">
+      Your Google Sheet must have headers in row 1: <code>Timestamp, Date, Restaurant, City, Reviewer, Food, Service, Ambience, Drinks, Value, Consistency, Overall, Band, Notes, UserAgent</code>
     </div>
-    <div style="margin-top:10px">
-      <label>Debug output</label>
+
+    <details id="diag">
+      <summary>Diagnostics (optional)</summary>
+      <div class="row" style="margin-top:8px">
+        <button id="testBtn">Test endpoint (GET)</button>
+        <button id="postBtn">POST sample row</button>
+      </div>
       <pre id="log">—</pre>
-    </div>
+    </details>
   </div>
 </div>
 
 <script>
 const CATS = [
-  {key:'Food', label:'Food · 67%', w:0.67, help:'Benchmark-setting, nothing to fault'},
-  {key:'Service', label:'Service · 10%', w:0.10, help:'Polished and helpful'},
-  {key:'Ambience', label:'Ambience · 7%', w:0.07, help:'Distinctive and comfortable'},
-  {key:'Drinks', label:'Drinks · 6%', w:0.06, help:'Wide-ranging, well-priced, thoughtful pairings'},
-  {key:'Value', label:'Value · 5%', w:0.05, help:'Well-priced for what’s offered'},
-  {key:'Consistency', label:'Consistency · 5%', w:0.05, help:'Dependable with slight variation'}
+  {key:'Food', label:'Food · 67%', w:0.67, help:'Depth, clarity, seasoning, execution, balance'},
+  {key:'Service', label:'Service · 10%', w:0.10, help:'Warmth, pace, accuracy, product knowledge'},
+  {key:'Ambience', label:'Ambience · 7%', w:0.07, help:'Comfort, acoustics, lighting, character'},
+  {key:'Drinks', label:'Drinks · 6%', w:0.06, help:'List breadth, curation, pricing, pairings'},
+  {key:'Value', label:'Value · 5%', w:0.05, help:'Worth vs. experience and market peers'},
+  {key:'Consistency', label:'Consistency · 5%', w:0.05, help:'Reliability across dishes/visits'}
 ];
 const scores = {}; const cfgKey='sheetbest_cfg_v3';
 
-function log(msg){const el=document.getElementById('log'); el.textContent=(typeof msg==='string')?msg:JSON.stringify(msg,null,2);}
-
-function mkChips(cat){
-  const wrap=document.createElement('div');
-  wrap.className='card'; wrap.style.padding='10px'; wrap.style.margin='10px 0';
-  wrap.innerHTML = `<div class="grid">
-    <div class="g3"><strong>${cat.label}</strong></div>
-    <div class="g9 chips" id="chips-${cat.key}"></div>
-    <div class="g12 muted">${cat.help}</div>
-  </div>`;
-  const row = wrap.querySelector(`#chips-${cat.key}`);
-  for(let i=10;i>=0;i--){
-    const b=document.createElement('button');
-    b.className='chip'; b.textContent=String(i); b.setAttribute('aria-pressed','false');
-    b.addEventListener('click',()=>{scores[cat.key]=i; [...row.children].forEach(x=>x.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true'); updateOverall();});
-    row.appendChild(b);
-  }
-  return wrap;
-}
-
-function buildCats(){const root=document.getElementById('cats'); CATS.forEach(c=>root.appendChild(mkChips(c)));}
-
+function log(msg){const el=document.getElementById('log'); if(!el) return; el.textContent=(typeof msg==='string')?msg:JSON.stringify(msg,null,2);}
 function n(x){return Number(x)||0;}
 function updateOverall(){
-  let total=0;
-  CATS.forEach(c=>{ total += (n(scores[c.key]) * c.w); });
+  let total=0; CATS.forEach(c=>{ total += n(scores[c.key])*c.w; });
   const o = Math.round(total*10)/10;
   document.getElementById('overall').textContent=o.toFixed(1);
   document.getElementById('bar').value=o;
@@ -123,16 +114,24 @@ function updateOverall(){
     (o>=7.5) ? 'Excellent; a clear standout' :
     (o>=6.5) ? 'Good with room to grow' : 'Mixed or below';
 }
-
-function saveCfg(){localStorage.setItem(cfgKey, JSON.stringify({
-  endpoint:document.getElementById('endpoint').value.trim(),
-  apikey:document.getElementById('apikey').value.trim()
-})); log('Config saved');}
-function loadCfg(){try{const c=JSON.parse(localStorage.getItem(cfgKey)||'{}');
-  document.getElementById('endpoint').value=c.endpoint||'';
-  document.getElementById('apikey').value=c.apikey||'';
-}catch(e){}}
-
+function mkChips(cat){
+  const wrap=document.createElement('div');
+  wrap.className='card'; wrap.style.padding='12px'; wrap.style.margin='10px 0';
+  wrap.innerHTML=`<div class="grid">
+    <div class="g3"><strong>${cat.label}</strong></div>
+    <div class="g9 chips" id="chips-${cat.key}"></div>
+    <div class="g12 mut">${cat.help}</div>
+  </div>`;
+  const row=wrap.querySelector('#chips-'+cat.key);
+  for(let i=10;i>=0;i--){
+    const b=document.createElement('button');
+    b.className='chip'; b.textContent=String(i); b.setAttribute('aria-pressed','false');
+    b.addEventListener('click',()=>{scores[cat.key]=i;[...row.children].forEach(x=>x.setAttribute('aria-pressed','false'));b.setAttribute('aria-pressed','true');updateOverall();});
+    row.appendChild(b);
+  }
+  return wrap;
+}
+function buildCats(){const root=document.getElementById('cats'); CATS.forEach(c=>root.appendChild(mkChips(c)));}
 function rowPayload(){
   return [{
     Timestamp:new Date().toISOString(),
@@ -148,38 +147,20 @@ function rowPayload(){
     UserAgent:navigator.userAgent
   }];
 }
+function saveCfg(){localStorage.setItem(cfgKey, JSON.stringify({
+  endpoint:document.getElementById('endpoint').value.trim(),
+  apikey:document.getElementById('apikey').value.trim()
+})); alert('Config saved');}
+function loadCfg(){try{const c=JSON.parse(localStorage.getItem(cfgKey)||'{}');
+  document.getElementById('endpoint').value=c.endpoint||''; document.getElementById('apikey').value=c.apikey||'';
+}catch(e){}}
 
 async function testGet(){
-  const {endpoint}=JSON.parse(localStorage.getItem(cfgKey)||'{}');
-  if(!endpoint) return log('Missing endpoint');
-  try{
-    const r=await fetch(endpoint); const t=await r.text();
-    log({when:'GET', status:r.status, ok:r.ok, response:t.slice(0,500)});
-  }catch(e){ log({when:'GET', error:String(e)}); }
+  const {endpoint}=JSON.parse(localStorage.getItem(cfgKey)||'{}'); if(!endpoint) return log('Missing endpoint');
+  try{ const r=await fetch(endpoint); const t=await r.text(); log({when:'GET',status:r.status,ok:r.ok,response:t.slice(0,600)}); }catch(e){ log({when:'GET',error:String(e)}); }
 }
-
-async function sync(){
-  const {endpoint,apikey}=JSON.parse(localStorage.getItem(cfgKey)||'{}');
-  if(!endpoint) return log('Missing endpoint');
-  const headers={'Content-Type':'application/json'};
-  if(apikey){ headers['X-API-KEY']=apikey; headers['Authorization']='Bearer '+apikey; }
-  try{
-    const r=await fetch(endpoint,{method:'POST',headers,body:JSON.stringify(rowPayload())});
-    const t=await r.text();
-    log({when:'POST', status:r.status, ok:r.ok, response:t});
-  }catch(e){ log({when:'POST', error:String(e)}); }
-}
-
-function clearForm(){document.querySelectorAll('input[type=text], textarea').forEach(i=>i.value=''); document.getElementById('date').value=new Date().toISOString().slice(0,10); Object.keys(scores).forEach(k=>delete scores[k]); document.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed','false')); updateOverall(); }
-function saveLocal(){ const items=JSON.parse(localStorage.getItem('rr_items')||'[]'); items.push(rowPayload()[0]); localStorage.setItem('rr_items', JSON.stringify(items)); log('Saved locally ('+items.length+' items).'); }
-
-document.getElementById('date').value=new Date().toISOString().slice(0,10);
-buildCats(); loadCfg(); updateOverall();
-document.getElementById('saveCfg').addEventListener('click',saveCfg);
-document.getElementById('testBtn').addEventListener('click',testGet);
-document.getElementById('syncBtn').addEventListener('click',sync);
-document.getElementById('clearForm').addEventListener('click',clearForm);
-document.getElementById('saveLocal').addEventListener('click',saveLocal);
-</script>
-</body>
-</html>
+async function postSample(){
+  const {endpoint,apikey}=JSON.parse(localStorage.getItem(cfgKey)||'{}'); if(!endpoint) return log('Missing endpoint');
+  const headers={'Content-Type':'application/json'}; if(apikey){headers['X-API-KEY']=apikey; headers['Authorization']='Bearer '+apikey;}
+  const now=new Date();
+  const sample=[{Timestamp:now.toISOString(),Date:now.toISOString().slice(0,10),Restaurant:'Tester Bistro',City:'London',Reviewer:'Chris',Food:9,Service:8,Ambience:8,Drinks:7,Value:7,Consistency:8,Overall:Math.round((9*0.67+8*0.10+]()
