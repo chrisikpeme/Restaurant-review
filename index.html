@@ -1,3 +1,4 @@
+<!-- build: ui4 -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -23,35 +24,33 @@
   .g12{grid-column:span 12}.g8{grid-column:span 8}.g6{grid-column:span 6}.g4{grid-column:span 4}.g3{grid-column:span 3}
   @media(max-width:860px){.g8,.g6,.g4,.g3{grid-column:span 12}}
 
-  /* Always-visible chips (no horizontal scroll). */
-  .chips{
-    display:grid;
-    grid-template-columns:repeat(11, minmax(42px, 1fr)); /* iPad/Mac: single row fits */
-    gap:6px;
-    align-items:center;
-  }
-  /* iPhone: wrap into two rows (6 + 5) so all 11 are visible without scrolling */
-  @media(max-width:480px){
-    .chips{ grid-template-columns:repeat(6, minmax(40px, 1fr)); }
-    .chip{ height:36px; min-width:40px; font-size:14px; }
-  }
-
+  /* Always-visible chips (no scrolling). */
+  .chips{display:grid;grid-template-columns:repeat(11, 1fr);gap:8px;align-items:center}
   .chip{
     display:inline-flex;align-items:center;justify-content:center;
-    min-width:42px;height:38px;
-    border:1px solid var(--line);border-radius:10px;
-    background:var(--chip);color:var(--ink);
-    cursor:pointer;transition:.15s
+    width:100%;height:42px;border:1px solid var(--line);border-radius:10px;
+    background:var(--chip);color:var(--ink);cursor:pointer;transition:.12s;
   }
   .chip:hover{transform:translateY(-1px)}
   .chip[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset;background:#0e1b16}
+  @media(max-width:540px){ .chips{grid-template-columns:repeat(6,1fr)} .chip{height:38px;font-size:14px} }
+
   .mut{color:var(--mut);font-size:14px}
+  .desc{font-weight:700;margin-top:4px}
   .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
   button{border:1px solid var(--line);background:var(--chip);color:var(--ink);padding:10px 14px;border-radius:10px;cursor:pointer}
   button.primary{border-color:var(--accent)}
-  progress{width:100%;height:12px}
-  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#0f1f16;border:1px solid #183f31;
-         color:#c7ffdf;padding:10px 14px;border-radius:10px;opacity:0;transition:.2s}
+
+  /* Colorful overall bar: red → amber → green */
+  progress{
+    -webkit-appearance:none;appearance:none;width:100%;height:12px;
+    border:1px solid var(--line);border-radius:999px;background:#0a1122;overflow:hidden}
+  progress::-webkit-progress-bar{background:#0a1122;border-radius:999px}
+  progress::-webkit-progress-value{background:linear-gradient(90deg,#ef4444 0%,#f59e0b 50%,#10b981 100%);border-radius:999px}
+  progress::-moz-progress-bar{background:linear-gradient(90deg,#ef4444 0%,#f59e0b 50%,#10b981 100%);border-radius:999px}
+
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);
+         background:#0f1f16;border:1px solid #183f31;color:#c7ffdf;padding:10px 14px;border-radius:10px;opacity:0;transition:.2s}
   .toast.show{opacity:1}
 </style>
 </head>
@@ -74,8 +73,7 @@
     <h2>Overall result</h2>
     <div class="grid">
       <div class="g8">
-        <div class="row">
-          <strong>Weighted Overall:</strong>
+        <div class="row"><strong>Weighted Overall:</strong>
           <span id="overall" style="margin-left:6px">0.0</span> / 10 — <span id="band" class="mut">—</span>
         </div>
         <progress id="bar" max="10" value="0"></progress>
@@ -91,21 +89,21 @@
 <div id="toast" class="toast">Synced!</div>
 
 <script>
-/* ======= HARD-CODED ENDPOINT ======= */
-const ENDPOINT = 'https://api.sheetbest.com/sheets/9707a268-edd0-4f09-afe3-3f430786e8e2';
-const APIKEY   = ''; // keep '' because your Sheet.best is "Use API = No"
-/* =================================== */
+/* Hard-coded endpoint */
+const ENDPOINT='https://api.sheetbest.com/sheets/9707a268-edd0-4f09-afe3-3f430786e8e2';
+const APIKEY='';
 
-const CATS = [
-  {key:'Food', label:'Food · 67%', w:0.67, help:'Depth, clarity, seasoning, execution, balance'},
-  {key:'Service', label:'Service · 10%', w:0.10, help:'Warmth, pace, accuracy, product knowledge'},
-  {key:'Ambience', label:'Ambience · 7%', w:0.07, help:'Comfort, acoustics, lighting, character'},
-  {key:'Drinks', label:'Drinks · 6%', w:0.06, help:'List breadth, curation, pricing, pairings'},
-  {key:'Value', label:'Value · 5%', w:0.05, help:'Worth vs. experience and market peers'},
-  {key:'Consistency', label:'Consistency · 5%', w:0.05, help:'Reliability across dishes/visits'}
+/* Categories + descriptors */
+const CATS=[
+  {key:'Food',label:'Food · 67%',w:0.67,help:'Depth, clarity, seasoning, execution, balance'},
+  {key:'Service',label:'Service · 10%',w:0.10,help:'Warmth, pace, accuracy, product knowledge'},
+  {key:'Ambience',label:'Ambience · 7%',w:0.07,help:'Comfort, acoustics, lighting, character'},
+  {key:'Drinks',label:'Drinks · 6%',w:0.06,help:'List breadth, curation, pricing, pairings'},
+  {key:'Value',label:'Value · 5%',w:0.05,help:'Worth vs. experience and market peers'},
+  {key:'Consistency',label:'Consistency · 5%',w:0.05,help:'Reliability across dishes/visits'}
 ];
 
-const DESCR = {
+const DESCR={
   Food:{10:"Benchmark cooking; flawless technique; vivid, memorable dishes.",9:"Refined and precise; deep flavor and balance; tiny quibbles only.",8:"Skilled cooking with character; consistent seasoning and texture.",7:"Solid with clear highlights; a few uneven elements.",6:"Competent but lacks spark or definition.",5:"Hit-and-miss; seasoning or textures off at times.",4:"Several technical slips; muddled flavors.",3:"Poor execution; weak balance and control.",2:"Major faults that distract from the dish.",1:"Serious issues; would not order again.",0:"Not served / unable to assess."},
   Service:{10:"Anticipatory and effortless; personal yet unobtrusive.",9:"Polished pacing and excellent product knowledge.",8:"Attentive and warm; minor slips only.",7:"Friendly, generally on time; a few gaps.",6:"Basic, reactive rather than proactive.",5:"Inconsistent; noticeable waits or misses.",4:"Disjointed; items forgotten or mixed up.",3:"Slow and inattentive throughout.",2:"Frequent errors; little course control.",1:"Unhelpful or dismissive.",0:"Not applicable."},
   Ambience:{10:"Distinctive, comfortable, and acoustically calm; lighting spot-on.",9:"Stylish and coherent; easy to relax.",8:"Pleasant space with thoughtful details.",7:"Comfortable, a touch generic.",6:"Functional but lacks character.",5:"Crowded/noisy or awkward layout at times.",4:"Lighting or acoustics regularly detract.",3:"Uncomfortable seating or distracting noise.",2:"Poorly maintained or harsh environment.",1:"Actively unpleasant.",0:"Not applicable."},
@@ -114,33 +112,48 @@ const DESCR = {
   Consistency:{10:"Rock-solid across dishes and visits.",9:"Minor variance only; highly dependable.",8:"Mostly steady with rare dips.",7:"Some swings between dishes or days.",6:"Uneven week to week.",5:"Hit-and-miss; depends on the order.",4:"Regular lapses in execution.",3:"Frequent inconsistency.",2:"Usually below its best.",1:"Rarely delivers as expected.",0:"Not applicable."}
 };
 
-const scores = {};
-const $ = id => document.getElementById(id);
-const n = x => Number(x)||0;
+const scores={}; const $=id=>document.getElementById(id); const n=x=>Number(x)||0;
+
+/* Color for descriptor text: blend red→amber→green by score (0..10) */
+function lerp(a,b,t){return Math.round(a+(b-a)*t)}
+function blend(c1,c2,t){ // hex to rgb, then back
+  const a=[parseInt(c1.slice(1,3),16),parseInt(c1.slice(3,5),16),parseInt(c1.slice(5,7),16)];
+  const b=[parseInt(c2.slice(1,3),16),parseInt(c2.slice(3,5),16),parseInt(c2.slice(5,7),16)];
+  const r=lerp(a[0],b[0],t), g=lerp(a[1],b[1],t), bl=lerp(a[2],b[2],t);
+  return `rgb(${r},${g},${bl})`;
+}
+function ratingColor(score){
+  const t=Math.max(0,Math.min(1, score/10));        // 0..1
+  if(t<=0.5){ // red (#ef4444) -> amber (#f59e0b)
+    const tt=t/0.5; return blend('#ef4444','#f59e0b',tt);
+  } else {    // amber -> green (#10b981)
+    const tt=(t-0.5)/0.5; return blend('#f59e0b','#10b981',tt);
+  }
+}
 
 function updateOverall(){
-  let total=0; CATS.forEach(c=> total += n(scores[c.key])*c.w );
-  const o = Math.round(total*10)/10;
+  let total=0; CATS.forEach(c=> total+=n(scores[c.key])*c.w );
+  const o=Math.round(total*10)/10;
   $('overall').textContent=o.toFixed(1);
   $('bar').value=o;
-  $('band').textContent =
-    (o>=9.5) ? 'Elite by any measure' :
-    (o>=8.5) ? 'Outstanding; destination dining' :
-    (o>=7.5) ? 'Excellent; a clear standout' :
-    (o>=6.5) ? 'Good with room to grow' : 'Mixed or below';
+  $('band').textContent=(o>=9.5)?'Elite by any measure'
+      :(o>=8.5)?'Outstanding; destination dining'
+      :(o>=7.5)?'Excellent; a clear standout'
+      :(o>=6.5)?'Good with room to grow':'Mixed or below';
 }
 
 function mkChips(cat){
   const wrap=document.createElement('div');
   wrap.className='card'; wrap.style.padding='12px'; wrap.style.margin='10px 0';
   wrap.innerHTML=`<div class="grid">
-    <div class="g3"><strong>${cat.label}</strong></div>
-    <div class="g9 chips" id="chips-${cat.key}"></div>
+    <div class="g12"><strong>${cat.label}</strong></div>
     <div class="g12 mut" id="help-${cat.key}">${cat.help}</div>
-    <div class="g12 mut" id="desc-${cat.key}" style="margin-top:4px"></div>
+    <div class="g12 chips" id="chips-${cat.key}"></div>
+    <div class="g12 desc" id="desc-${cat.key}"></div>
   </div>`;
   const row=wrap.querySelector('#chips-'+cat.key);
   const descEl=wrap.querySelector('#desc-'+cat.key);
+
   for(let i=10;i>=0;i--){
     const b=document.createElement('button');
     b.className='chip'; b.textContent=String(i); b.setAttribute('aria-pressed','false');
@@ -148,7 +161,9 @@ function mkChips(cat){
       scores[cat.key]=i;
       [...row.children].forEach(x=>x.setAttribute('aria-pressed','false'));
       b.setAttribute('aria-pressed','true');
-      descEl.textContent = (DESCR[cat.key] && DESCR[cat.key][i]!=null) ? DESCR[cat.key][i] : '';
+      const txt=(DESCR[cat.key] && DESCR[cat.key][i]!=null)?DESCR[cat.key][i]:'';
+      descEl.textContent=txt;
+      descEl.style.color=ratingColor(i);
       updateOverall();
     });
     row.appendChild(b);
@@ -174,21 +189,22 @@ function rowPayload(){
   }];
 }
 
-function toast(msg){const t=$('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1600);}
-
+function toast(msg){const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1600);}
 async function sync(){
   const headers={'Content-Type':'application/json'};
-  if(APIKEY){ headers['X-API-KEY']=APIKEY; headers['Authorization']='Bearer '+APIKEY; }
+  if(APIKEY){headers['X-API-KEY']=APIKEY; headers['Authorization']='Bearer '+APIKEY;}
   try{
     const r=await fetch(ENDPOINT,{method:'POST',headers,body:JSON.stringify(rowPayload())});
-    if(r.ok){ toast('Synced!'); } else { alert('Sync failed: '+r.status); }
-  }catch(e){ alert('Network error'); }
+    if(r.ok){toast('Synced!');} else {alert('Sync failed: '+r.status);}
+  }catch(e){alert('Network error');}
 }
 
 /* Init */
-$('date').value=new Date().toISOString().slice(0,10);
+document.getElementById('date').value=new Date().toISOString().slice(0,10);
 buildCats(); updateOverall();
-$('syncBtn').addEventListener('click', sync);
+document.getElementById('syncBtn').addEventListener('click', sync);
 </script>
+
+<div id="toast" class="toast">Synced!</div>
 </body>
 </html>
