@@ -1,0 +1,67 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Sheet.best Tester</title>
+<style>
+  body{font-family:system-ui;-webkit-text-size-adjust:100%;padding:16px}
+  input,button{font:inherit;padding:8px;margin:6px 0}
+  input{width:100%;max-width:680px}
+  pre{white-space:pre-wrap;background:#f6f8fa;padding:10px;border:1px solid #ddd}
+</style>
+<h1>Sheet.best Tester</h1>
+
+<label>Sheet.best Endpoint URL</label>
+<input id="endpoint" placeholder="https://api.sheetbest.com/sheets/…">
+
+<label>API key (optional)</label>
+<input id="apikey" placeholder="Only if your connection requires it">
+
+<div>
+  <button id="btnGet">Test endpoint (GET)</button>
+  <button id="btnPost">POST sample row</button>
+</div>
+
+<pre id="out">—</pre>
+
+<script>
+const $ = id => document.getElementById(id);
+function log(x){$('out').textContent = (typeof x==='string')?x:JSON.stringify(x,null,2);}
+
+async function doGet(){
+  const url = $('endpoint').value.trim();
+  if(!url) return log('Missing endpoint');
+  try{
+    const r = await fetch(url);
+    log({when:'GET', status:r.status, ok:r.ok, response:(await r.text()).slice(0,600)});
+  }catch(e){ log({when:'GET', error:String(e)}); }
+}
+
+async function doPost(){
+  const url = $('endpoint').value.trim();
+  if(!url) return log('Missing endpoint');
+  const headers = {'Content-Type':'application/json'};
+  const key = $('apikey').value.trim();
+  if(key){ headers['X-API-KEY']=key; headers['Authorization']='Bearer '+key; }
+
+  const now = new Date();
+  const row = [{
+    Timestamp: now.toISOString(),
+    Date: now.toISOString().slice(0,10),
+    Restaurant: 'Tester Bistro',
+    City: 'London',
+    Reviewer: 'Chris',
+    Food: 9, Service: 8, Ambience: 8, Drinks: 7, Value: 7, Consistency: 8,
+    Overall: Math.round((9*0.67+8*0.10+8*0.07+7*0.06+7*0.05+8*0.05)*10)/10,
+    Band: '—',
+    Notes: 'Smoke test from debug.html',
+    UserAgent: navigator.userAgent
+  }];
+
+  try{
+    const r = await fetch(url,{method:'POST',headers,body:JSON.stringify(row)});
+    log({when:'POST', status:r.status, ok:r.ok, response: await r.text()});
+  }catch(e){ log({when:'POST', error:String(e)}); }
+}
+
+$('btnGet').addEventListener('click', doGet);
+$('btnPost').addEventListener('click', doPost);
+</script>
