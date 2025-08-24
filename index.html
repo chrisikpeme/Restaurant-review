@@ -22,11 +22,27 @@
   .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
   .g12{grid-column:span 12}.g8{grid-column:span 8}.g6{grid-column:span 6}.g4{grid-column:span 4}.g3{grid-column:span 3}
   @media(max-width:860px){.g8,.g6,.g4,.g3{grid-column:span 12}}
-  .chips{display:flex;gap:6px;overflow-x:auto;padding:4px 2px 8px 2px;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
-  .chips::-webkit-scrollbar{height:8px}
-  .chips::-webkit-scrollbar-thumb{background:#1c2a3f;border-radius:8px}
-  .chip{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;min-width:42px;height:38px;
-        border:1px solid var(--line);border-radius:10px;background:var(--chip);color:var(--ink);cursor:pointer;transition:.15s}
+
+  /* Always-visible chips (no horizontal scroll). */
+  .chips{
+    display:grid;
+    grid-template-columns:repeat(11, minmax(42px, 1fr)); /* iPad/Mac: single row fits */
+    gap:6px;
+    align-items:center;
+  }
+  /* iPhone: wrap into two rows (6 + 5) so all 11 are visible without scrolling */
+  @media(max-width:480px){
+    .chips{ grid-template-columns:repeat(6, minmax(40px, 1fr)); }
+    .chip{ height:36px; min-width:40px; font-size:14px; }
+  }
+
+  .chip{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:42px;height:38px;
+    border:1px solid var(--line);border-radius:10px;
+    background:var(--chip);color:var(--ink);
+    cursor:pointer;transition:.15s
+  }
   .chip:hover{transform:translateY(-1px)}
   .chip[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset;background:#0e1b16}
   .mut{color:var(--mut);font-size:14px}
