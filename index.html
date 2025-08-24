@@ -1,4 +1,4 @@
-<!-- build: ui6 (thresholds Mixed>=5.0, Poor>=2.5) -->
+<!-- build: ui8 (Dent+Rayner descriptors, solid bar, Mixed>=5, Poor>=2.5) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -24,7 +24,7 @@
   .g12{grid-column:span 12}.g8{grid-column:span 8}.g6{grid-column:span 6}.g4{grid-column:span 4}.g3{grid-column:span 3}
   @media(max-width:860px){.g8,.g6,.g4,.g3{grid-column:span 12}}
 
-  /* Always-visible chips (no scrolling). */
+  /* Always-visible chips (no scroll) */
   .chips{display:grid;grid-template-columns:repeat(11, 1fr);gap:8px;align-items:center}
   .chip{
     display:inline-flex;align-items:center;justify-content:center;width:100%;height:42px;
@@ -41,15 +41,15 @@
   button{border:1px solid var(--line);background:var(--chip);color:var(--ink);padding:10px 14px;border-radius:10px;cursor:pointer}
   button.primary{border-color:var(--accent)}
 
-  /* Overall bar: single solid color controlled by JS */
+  /* Overall bar: single solid colour controlled by JS */
   progress{
     -webkit-appearance:none;appearance:none;width:100%;height:12px;
     border:1px solid var(--line);border-radius:999px;background:#0a1122;overflow:hidden;
-    --bar-color:#ef4444; /* default red; JS updates this */
+    --bar-color:#ef4444;
   }
   progress::-webkit-progress-bar{background:#0a1122;border-radius:999px}
-  progress::-webkit-progress-value{background:var(--bar-color);border-radius:999px}
-  progress::-moz-progress-bar{background:var(--bar-color);border-radius:999px}
+  progress::-webkit-progress-value{background:var(--bar-color)!important;border-radius:999px}
+  progress::-moz-progress-bar{background:var(--bar-color)!important;border-radius:999px}
 
   .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);
          background:#0f1f16;border:1px solid #183f31;color:#c7ffdf;padding:10px 14px;border-radius:10px;opacity:0;transition:.2s}
@@ -98,7 +98,7 @@
 const ENDPOINT='https://api.sheetbest.com/sheets/9707a268-edd0-4f09-afe3-3f430786e8e2';
 const APIKEY='';
 
-/* Categories + descriptors */
+/* Categories + help */
 const CATS=[
   {key:'Food',label:'Food · 67%',w:0.67,help:'Depth, clarity, seasoning, execution, balance'},
   {key:'Service',label:'Service · 10%',w:0.10,help:'Warmth, pace, accuracy, product knowledge'},
@@ -108,35 +108,105 @@ const CATS=[
   {key:'Consistency',label:'Consistency · 5%',w:0.05,help:'Reliability across dishes/visits'}
 ];
 
+/* Your Dent-ish descriptors (10→0) */
 const DESCR={
-  Food:{10:"Benchmark cooking; flawless technique; vivid, memorable dishes.",9:"Refined and precise; deep flavor and balance; tiny quibbles only.",8:"Skilled cooking with character; consistent seasoning and texture.",7:"Solid with clear highlights; a few uneven elements.",6:"Competent but lacks spark or definition.",5:"Hit-and-miss; seasoning or textures off at times.",4:"Several technical slips; muddled flavors.",3:"Poor execution; weak balance and control.",2:"Major faults that distract from the dish.",1:"Serious issues; would not order again.",0:"Not served / unable to assess."},
-  Service:{10:"Anticipatory and effortless; personal yet unobtrusive.",9:"Polished pacing and excellent product knowledge.",8:"Attentive and warm; minor slips only.",7:"Friendly, generally on time; a few gaps.",6:"Basic, reactive rather than proactive.",5:"Inconsistent; noticeable waits or misses.",4:"Disjointed; items forgotten or mixed up.",3:"Slow and inattentive throughout.",2:"Frequent errors; little course control.",1:"Unhelpful or dismissive.",0:"Not applicable."},
-  Ambience:{10:"Distinctive, comfortable, and acoustically calm; lighting spot-on.",9:"Stylish and coherent; easy to relax.",8:"Pleasant space with thoughtful details.",7:"Comfortable, a touch generic.",6:"Functional but lacks character.",5:"Crowded/noisy or awkward layout at times.",4:"Lighting or acoustics regularly detract.",3:"Uncomfortable seating or distracting noise.",2:"Poorly maintained or harsh environment.",1:"Actively unpleasant.",0:"Not applicable."},
-  Drinks:{10:"Deep, curated list; smart pairings; fair margins.",9:"Broad, well-priced selection; confident pairing.",8:"Good choice across styles; sensible pricing.",7:"Decent range; a few standouts.",6:"Limited but workable.",5:"Narrow list or uneven pricing.",4:"Short list and weak pairing options.",3:"Few appealing choices.",2:"Overpriced or consistently mismatched.",1:"Poor quality pours.",0:"Not applicable."},
-  Value:{10:"Remarkable value relative to quality and peers.",9:"Well-priced for the experience delivered.",8:"Fair pricing; feels justified.",7:"Slightly above peers but acceptable.",6:"Noticeably priced up for what you get.",5:"Mixed value; some items overpriced.",4:"Regularly overpriced vs peers.",3:"Poor value across much of the menu.",2:"High prices with little return.",1:"Would not return at these prices.",0:"Not applicable."},
-  Consistency:{10:"Rock-solid across dishes and visits.",9:"Minor variance only; highly dependable.",8:"Mostly steady with rare dips.",7:"Some swings between dishes or days.",6:"Uneven week to week.",5:"Hit-and-miss; depends on the order.",4:"Regular lapses in execution.",3:"Frequent inconsistency.",2:"Usually below its best.",1:"Rarely delivers as expected.",0:"Not applicable."}
+  Food:{
+    10:'Cooking to dream about for years.',
+    9:'Exact, assured; flavours sing clearly.',
+    8:'Characterful, inventive dishes that land.',
+    7:'Good cooking with the odd wobble.',
+    6:'Capable, cautious, soon forgotten.',
+    5:'Patchy cooking; seasoning ropey.',
+    4:'Sloppy edges; muddled, wandering flavours.',
+    3:'Technique falters often.',
+    2:'Errors dominate; appetite dwindles.',
+    1:'Misses the point entirely.',
+    0:'Food poisoning.'
+  },
+  Service:{
+    10:'Seamless, discreet perfection.',
+    9:'Pacing right; the room understood.',
+    8:'Warm, alert; fixes made swiftly.',
+    7:'Pleasant and mostly punctual.',
+    6:'Functional, but nobody steering.',
+    5:'Inconsistent; you’re kept waiting.',
+    4:'Orders muddled; attention slips away.',
+    3:'Slow, distracted; hard to get attention.',
+    2:'Errors stack up; timing collapses.',
+    1:'Indifferent, edging towards rude.',
+    0:'Self-service.'
+  },
+  Ambience:{
+    10:'Feels like it was made for us.',
+    9:'Cohesive, calm, comfortably lit.',
+    8:'Thoughtful touches; the space breathes.',
+    7:'Pleasant, if a touch anonymous.',
+    6:'Serviceable, short on charm.',
+    5:'Tight tables or swelling noise.',
+    4:'Glare, echo, draughts distract throughout.',
+    3:'Drab but adequate.',
+    2:'Scuffed, tired, a little harsh.',
+    1:'Actively unpleasant.',
+    0:'We left.'
+  },
+  Drinks:{
+    10:'Exceptional list; pairings lift everything.',
+    9:'Range with restraint; prices make sense.',
+    8:'Good spread; choices feel considered.',
+    7:'Decent selection but expensive.',
+    6:'Short but workable.',
+    5:'Narrow list or awkward pricing.',
+    4:'Thin options; pairing feels guessed.',
+    3:'Little here you actually want.',
+    2:'Off-key and overpriced.',
+    1:'Dire selection.',
+    0:'No drinks served.'
+  },
+  Value:{
+    10:'Remarkable for the money.',
+    9:'Priced properly for what’s delivered.',
+    8:'A little high, still fine.',
+    7:'Good, but a couple of rip-off items.',
+    6:'Cost outruns experience.',
+    5:'Mixed value; a few winces.',
+    4:'Often dearer than peers.',
+    3:'The bill stings; joy doesn’t.',
+    2:'Very bad value.',
+    1:'Not worth even coming here.',
+    0:'Free.'
+  },
+  Consistency:{
+    10:'Every plate lands, every time.',
+    9:'Barely a wobble.',
+    8:'Steady with rare dips.',
+    7:'Some good days, some shrugs.',
+    6:'Often uneven.',
+    5:'Hit and miss.',
+    4:'Lapses you start to expect.',
+    3:'Off the pace too often.',
+    2:'Usually below its own best.',
+    1:'Reliability missing.',
+    0:'Fawlty Towers.'
+  }
 };
 
 const scores={}; const $=id=>document.getElementById(id); const n=x=>Number(x)||0;
 
-/* Helpers: color from red → amber → green; single color used for bar + descriptor */
+/* Colour helper: red→amber→green single tone */
 function lerp(a,b,t){return Math.round(a+(b-a)*t)}
 function blend(c1,c2,t){const a=[parseInt(c1.slice(1,3),16),parseInt(c1.slice(3,5),16),parseInt(c1.slice(5,7),16)];
   const b=[parseInt(c2.slice(1,3),16),parseInt(c2.slice(3,5),16),parseInt(c2.slice(5,7),16)];
   const r=lerp(a[0],b[0],t), g=lerp(a[1],b[1],t), bl=lerp(a[2],b[2],t); return `rgb(${r},${g},${bl})`;}
-function ratingColor(score){
-  const t=Math.max(0,Math.min(1,score/10));
-  if(t<=0.5){return blend('#ef4444','#f59e0b',t/0.5);} else {return blend('#f59e0b','#10b981',(t-0.5)/0.5);}
-}
+function ratingColor(score){const t=Math.max(0,Math.min(1,score/10)); return (t<=0.5)?blend('#ef4444','#f59e0b',t/0.5):blend('#f59e0b','#10b981',(t-0.5)/0.5);}
 
 function bandFor(o){
-  return (o >= 9.5) ? 'Elite by any measure'
-       : (o >= 8.5) ? 'Outstanding; destination dining'
-       : (o >= 7.5) ? 'Excellent; a clear standout'
-       : (o >= 6.5) ? 'Good'
-       : (o >= 5.0) ? 'Mixed'
-       : (o >= 2.5) ? 'Poor'
-       : 'Tragic';
+  return (o>=9.5)?'Elite by any measure'
+       :(o>=8.5)?'Outstanding; destination dining'
+       :(o>=7.5)?'Excellent; a clear standout'
+       :(o>=6.5)?'Good'
+       :(o>=5.0)?'Mixed'
+       :(o>=2.5)?'Poor'
+       :'Tragic';
 }
 
 function updateOverall(){
@@ -144,9 +214,7 @@ function updateOverall(){
   const o=Math.round(total*10)/10;
   $('overall').textContent=o.toFixed(1);
   $('band').textContent=bandFor(o);
-  const bar=$('bar');
-  bar.value=o;
-  bar.style.setProperty('--bar-color', ratingColor(o)); // single solid color
+  const bar=$('bar'); bar.value=o; bar.style.setProperty('--bar-color', ratingColor(o));
 }
 
 function mkChips(cat){
@@ -160,7 +228,6 @@ function mkChips(cat){
   </div>`;
   const row=wrap.querySelector('#chips-'+cat.key);
   const descEl=wrap.querySelector('#desc-'+cat.key);
-
   for(let i=10;i>=0;i--){
     const b=document.createElement('button');
     b.className='chip'; b.textContent=String(i); b.setAttribute('aria-pressed','false');
