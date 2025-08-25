@@ -1,4 +1,4 @@
-<!-- build: ui11 (instant thanks + submit guard; Food60/others10) -->
+<!-- build: ui12 (instant thanks → saved → clearing; reset form; Food60/others10) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -24,8 +24,8 @@
   .g12{grid-column:span 12}.g8{grid-column:span 8}.g6{grid-column:span 6}.g4{grid-column:span 4}.g3{grid-column:span 3}
   @media(max-width:860px){.g8,.g6,.g4,.g3{grid-column:span 12}}
 
-  /* Always-visible chips (no scroll) */
-  .chips{display:grid;grid-template-columns:repeat(11, 1fr);gap:8px;align-items:center}
+  /* Always-visible 10→0 chips (no scroll) */
+  .chips{display:grid;grid-template-columns:repeat(11,1fr);gap:8px;align-items:center}
   .chip{
     display:inline-flex;align-items:center;justify-content:center;width:100%;height:42px;
     border:1px solid var(--line);border-radius:10px;background:var(--chip);color:var(--ink);
@@ -33,7 +33,7 @@
   }
   .chip:hover{transform:translateY(-1px)}
   .chip[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset;background:#0e1b16}
-  @media(max-width:540px){ .chips{grid-template-columns:repeat(6,1fr)} .chip{height:38px;font-size:14px} }
+  @media(max-width:540px){.chips{grid-template-columns:repeat(6,1fr)}.chip{height:38px;font-size:14px}}
 
   .mut{color:var(--mut);font-size:14px}
   .desc{font-weight:700;margin-top:4px}
@@ -45,8 +45,7 @@
   /* Overall bar: single solid colour controlled by JS */
   progress{
     -webkit-appearance:none;appearance:none;width:100%;height:12px;
-    border:1px solid var(--line);border-radius:999px;background:#0a1122;overflow:hidden;
-    --bar-color:#ef4444;
+    border:1px solid var(--line);border-radius:999px;background:#0a1122;overflow:hidden;--bar-color:#ef4444;
   }
   progress::-webkit-progress-bar{background:#0a1122;border-radius:999px}
   progress::-webkit-progress-value{background:var(--bar-color)!important;border-radius:999px}
@@ -186,6 +185,7 @@ function blend(c1,c2,t){const a=[parseInt(c1.slice(1,3),16),parseInt(c1.slice(3,
   const r=lerp(a[0],b[0],t), g=lerp(a[1],b[1],t), bl=lerp(a[2],b[2],t); return `rgb(${r},${g},${bl})`;}
 function ratingColor(score){const t=Math.max(0,Math.min(1,score/10)); return (t<=0.5)?blend('#ef4444','#f59e0b',t/0.5):blend('#f59e0b','#10b981',(t-0.5)/0.5);}
 
+/* Banding */
 function bandFor(o){
   return (o>=9.5)?'Elite by any measure'
        :(o>=8.5)?'Outstanding; destination dining'
@@ -196,9 +196,31 @@ function bandFor(o){
        :'Tragic';
 }
 
-/* Toast helper */
-function toast(msg){const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1600);}
+/* Toast helpers */
+function toast(msg, ms=1600){
+  const t=$('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._tid); if(ms>0){ t._tid=setTimeout(()=>t.classList.remove('show'), ms); }
+}
+function toastStep(msg, ms){ return new Promise(res=>{ toast(msg, ms); setTimeout(res, ms); }); }
 
+/* Clear the form for the next review */
+function clearForm(){
+  ['restaurant','city','reviewer','notes'].forEach(id=>$(id).value='');
+  $('date').value=new Date().toISOString().slice(0,10);
+  // reset chips & descriptions
+  CATS.forEach(c=>{
+    const row=$('chips-'+c.key); if(!row) return;
+    [...row.children].forEach(b=>b.setAttribute('aria-pressed','false'));
+    const desc=$('desc-'+c.key); if(desc) desc.textContent='';
+  });
+  // reset scores and overall display
+  for(const k in scores) delete scores[k];
+  $('overall').textContent='0.0';
+  $('bar').value=0;
+  $('band').textContent='—';
+}
+
+/* Compute overall */
 function updateOverall(){
   let total=0; CATS.forEach(c=> total+=n(scores[c.key])*c.w );
   const o=Math.round(total*10)/10;
@@ -207,6 +229,7 @@ function updateOverall(){
   const bar=$('bar'); bar.value=o; bar.style.setProperty('--bar-color', ratingColor(o));
 }
 
+/* Build category sections */
 function mkChips(cat){
   const wrap=document.createElement('div');
   wrap.className='card'; wrap.style.padding='12px'; wrap.style.margin='10px 0';
@@ -237,6 +260,7 @@ function mkChips(cat){
 
 function buildCats(){const root=$('cats'); CATS.forEach(c=>root.appendChild(mkChips(c)));}
 
+/* Prepare payload */
 function rowPayload(){
   return [{
     Timestamp:new Date().toISOString(),
@@ -253,19 +277,21 @@ function rowPayload(){
   }];
 }
 
+/* Submit handler with acknowledgement + clear sequence */
 async function sync(){
   const btn=$('syncBtn');
   const headers={'Content-Type':'application/json'};
   if(APIKEY){headers['X-API-KEY']=APIKEY; headers['Authorization']='Bearer '+APIKEY;}
 
-  // Instant acknowledgement + double-click guard
   btn.disabled=true; btn.textContent='Submitting…';
-  toast('Thanks for your review');
+  toast('Thanks for your review', 1200);
 
   try{
     const r=await fetch(ENDPOINT,{method:'POST',headers,body:JSON.stringify(rowPayload())});
     if(r.ok){
-      toast('Saved');            // success follow-up
+      await toastStep('Saved', 1100);
+      await toastStep('Clearing form…', 900);
+      clearForm();
     }else{
       alert('Sync failed: '+r.status);
     }
@@ -277,9 +303,9 @@ async function sync(){
 }
 
 /* Init */
-document.getElementById('date').value=new Date().toISOString().slice(0,10);
+$('date').value=new Date().toISOString().slice(0,10);
 buildCats(); updateOverall();
-document.getElementById('syncBtn').addEventListener('click', sync);
+$('syncBtn').addEventListener('click', sync);
 </script>
 
 <div id="toast" class="toast">Synced!</div>
