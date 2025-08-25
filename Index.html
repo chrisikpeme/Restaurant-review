@@ -1,125 +1,256 @@
-<!DOCTYPE html>
+<!-- build: ui17c (fix: result meter number colours correctly) -->
+<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Restaurant Review – Sheet.best Debug</title>
+<title>Restaurantometer</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <style>
-  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;margin:0;background:#0f172a;color:#e5e7eb}
-  .wrap{max-width:900px;margin:20px auto;padding:0 14px}
-  .card{background:#0b1224;border:1px solid #1f2937;border-radius:14px;padding:18px}
-  h1{margin:0 0 10px;font-size:22px}
-  label{display:block;margin:6px 0 4px}
+  :root{--bg:#0b1022;--card:#0f172a;--ink:#e6edf3;--mut:#9fb0c3;--line:#213047;--accent:#10b981;--chip:#0a1122;--red:#ef4444}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial}
+  .wrap{max-width:1100px;margin:24px auto;padding:0 16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  h2{margin:18px 0 8px;font-size:16px;color:var(--mut)}
+  label{display:block;margin:8px 0 4px}
   input,textarea,button{font:inherit}
-  input,textarea{width:100%;padding:10px;border:1px solid #374151;border-radius:10px;background:#0a1122;color:#e5e7eb}
-  textarea{min-height:60px}
-  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
-  button{border:1px solid #374151;background:#0a1122;color:#e5e7eb;padding:10px 14px;border-radius:10px;cursor:pointer}
-  pre{white-space:pre-wrap;background:#0a1122;border:1px solid #374151;border-radius:10px;padding:10px;margin-top:10px;overflow:auto}
-  .muted{color:#9ca3af}
+  input,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--chip);color:var(--ink)}
+  textarea{min-height:84px}
+  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
+  .g12{grid-column:span 12}.g8{grid-column:span 8}.g6{grid-column:span 6}.g4{grid-column:span 4}.g3{grid-column:span 3}
+  @media(max-width:860px){.g8,.g6,.g4,.g3{grid-column:span 12}}
+  .chips{display:grid;grid-template-columns:repeat(10,1fr);gap:8px;align-items:center;padding:2px;border-radius:12px}
+  @media(max-width:540px){.chips{grid-template-columns:repeat(5,1fr)}}
+  .chip{display:inline-flex;align-items:center;justify-content:center;width:100%;height:42px;border:1px solid var(--line);border-radius:10px;background:var(--chip);color:var(--ink);cursor:pointer;transition:.12s}
+  .chip:hover{transform:translateY(-1px)}
+  .chip[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset;background:#0e1b16}
+  @media(max-width:540px){ .chip{height:38px;font-size:14px} }
+  .mut{color:var(--mut);font-size:14px}
+  .desc{font-weight:700;margin-top:4px}
+  .req{margin-top:4px;font-size:13px;color:var(--red);font-weight:700}
+  .chips.error{outline:2px solid var(--red);outline-offset:2px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+  button{border:1px solid var(--line);background:var(--chip);color:var(--ink);padding:10px 14px;border-radius:10px;cursor:pointer}
+  button.primary{border-color:var(--accent)}
+  button[disabled]{opacity:.6;cursor:not-allowed}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#0f1f16;border:1px solid #183f31;color:#c7ffdf;padding:10px 14px;border-radius:10px;opacity:0;transition:.2s}
+  .toast.show{opacity:1}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="card">
-    <h1>Restaurant Review — <span class="muted">Sheet.best Debug</span></h1>
-
-    <div class="row">
-      <div>
-        <label>Restaurant</label><input id="restaurant" placeholder="Test Bistro">
-        <label>City</label><input id="city" placeholder="London">
-        <label>Reviewer</label><input id="reviewer" placeholder="Chris">
-      </div>
-      <div>
-        <label>Date</label><input id="date" type="date">
-        <label>Notes</label><textarea id="notes" placeholder="Smoke test"></textarea>
-      </div>
+    <!-- Header dial -->
+    <div class="logo-wrap" style="margin:0 0 8px">
+      <svg id="restaurantometer" viewBox="0 0 700 180" role="img" aria-labelledby="logoTitle" width="100%" height="auto">
+        <title id="logoTitle">Restaurantometer</title>
+        <defs>
+          <linearGradient id="g-arc" x1="210" y1="0" x2="490" y2="0" gradientUnits="userSpaceOnUse">
+            <stop offset="0%"  stop-color="#ef4444"/><stop offset="50%" stop-color="#f59e0b"/><stop offset="100%" stop-color="#10b981"/>
+          </linearGradient>
+          <filter id="soft" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#000" flood-opacity="0.35"/></filter>
+          <style>
+            .rto-label{font:700 28px/1.1 system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial;letter-spacing:.5px;fill:#e6edf3}
+            .rto-sub{font:12px system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial;fill:#9fb0c3}
+            .ticks{font:11px system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial}
+          </style>
+        </defs>
+        <g transform="translate(350,92)">
+          <path d="M -39,-68 A 78 78 0 1 1 -39,68" fill="none" stroke="#213047" stroke-width="14" stroke-linecap="round"/>
+          <path d="M -39,-68 A 78 78 0 1 1 -39,68" fill="none" stroke="url(#g-arc)" stroke-width="14" stroke-linecap="round" filter="url(#soft)"/>
+          <g id="rto-scale">
+            <g id="rto-t1" transform="rotate(-96)"><line x1="80" y1="0" x2="90" y2="0" stroke="#334155" stroke-width="2"/><text class="ticks" x="96" y="3" fill="#9fb0c3">1</text></g>
+            <g id="rto-t2" transform="rotate(-72)"><line x1="80" y1="0" x2="90" y2="0" stroke="#334155" stroke-width="2"/><text class="ticks" x="96" y="3" fill="#9fb0c3">2</text></g>
+            <g id="rto-t3" transform="rotate(-48)"><line x1="80" y1="0" x2="90" y2="0" stroke="#334155" stroke-width="2"/><text class="ticks" x="96" y="3" fill="#9fb0c3">3</text></g>
+            <g id="rto-t4" transform="rotate(-24)"><line x1="80" y1="0" x2="90" y2="0" stroke="#334155" stroke-width="2"/><text class="ticks" x="96" y="3" fill="#9fb0c3">4</text></g>
+            <g id="rto-t5" transform="rotate(0)"><line x1="80" y1="0" x2="90" y2="0" stroke="#334155" stroke-width="2"/><text class="ticks" x="96" y="3" fill="#9fb0c3">5</text></g>
+            <g id="rto-t6" transform="rotate(24)"><line x1="80" y1="0" x2="90" y2="0" stroke="#334155" stroke-width="2"/><text class="ticks" x="96" y="3" fill="#9fb0c3">6</text></g>
+            <g id="rto-t7" transform="rotate(48)"><line x1="80" y1="0" x2="90" y2="0" stroke="#334155" stroke-width="2"/><text class="ticks" x="96" y="3" fill="#9fb0c3">7</text></g>
+            <g id="rto-t8" transform="rotate(72)"><line x1="80" y1="0" x2="90" y2="0" stroke="#334155" stroke-width="2"/><text class="ticks" x="96" y="3" fill="#9fb0c3">8</text></g>
+            <g id="rto-t9" transform="rotate(96)"><line x1="80" y1="0" x2="90" y2="0" stroke="#334155" stroke-width="2"/><text class="ticks" x="96" y="3" fill="#9fb0c3">9</text></g>
+            <g id="rto-t10" transform="rotate(120)"><line x1="80" y1="0" x2="90" y2="0" stroke="#334155" stroke-width="2"/><text class="ticks" x="96" y="3" fill="#9fb0c3">10</text></g>
+          </g>
+          <g id="rto-needle" transform="rotate(-120)"><path d="M -3,0 L 84,0 L 0,-1 Z" fill="#e6edf3"/></g>
+        </g>
+        <text x="50%" y="160" text-anchor="middle" class="rto-label">Restaurantometer</text>
+        <text x="50%" y="174" text-anchor="middle" class="rto-sub">your restaurant rating guide</text>
+      </svg>
     </div>
 
-    <div class="toolbar">
-      <button id="syncBtn">Save + sync to Sheet</button>
-      <button id="testBtn">Test endpoint (GET)</button>
-      <button id="saveCfg">Save config</button>
+    <div class="grid" style="margin-top:10px">
+      <div class="g6"><label>Restaurant</label><input id="restaurant" placeholder="e.g., Test Bistro"></div>
+      <div class="g3"><label>City</label><input id="city" placeholder="City"></div>
+      <div class="g3"><label>Date</label><input id="date" type="date"></div>
+      <div class="g6"><label>Reviewer</label><input id="reviewer" placeholder="Your name"></div>
+      <div class="g6"><label>Notes</label><textarea id="notes" placeholder="Highlights, weaknesses, dishes to remember…"></textarea></div>
     </div>
 
-    <label style="margin-top:10px">Sheet.best Endpoint URL</label>
-    <input id="endpoint" placeholder="https://api.sheetbest.com/sheets/...">
-    <label>API key (optional)</label>
-    <input id="apikey" placeholder="leave blank (Use API = No)">
+    <h2>Categories</h2>
+    <div id="cats"></div>
 
-    <p class="muted" style="margin-top:10px">
-      Sheet headers required in row 1: 
-      <code>Timestamp, Date, Restaurant, City, Reviewer, Food, Service, Ambience, Drinks, Value, Consistency, Overall, Band, Notes, UserAgent</code>
-    </p>
+    <h2>Overall result</h2>
+    <div class="grid">
+      <div class="g8">
+        <div class="row"><strong>Weighted Overall:</strong>
+          <span id="overall" style="margin-left:6px">0.0</span> / 10 — <span id="band" class="mut">—</span>
+        </div>
 
-    <label>Debug output</label>
-    <pre id="log">—</pre>
+        <!-- Result dial -->
+        <div class="logo-wrap" style="margin:10px 0 6px">
+          <svg id="resultmeter" viewBox="0 0 700 220" role="img" aria-labelledby="resultTitle" width="100%" height="auto">
+            <title id="resultTitle">Overall restaurant score</title>
+            <defs>
+              <linearGradient id="g-arc-r" x1="210" y1="0" x2="490" y2="0" gradientUnits="userSpaceOnUse">
+                <stop offset="0%"  stop-color="#ef4444"/><stop offset="50%" stop-color="#f59e0b"/><stop offset="100%" stop-color="#10b981"/>
+              </linearGradient>
+              <filter id="soft-r" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#000" flood-opacity="0.35"/></filter>
+              <style>
+                .rm-center{font:700 26px system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial} /* no fixed fill */
+                .rm-band{font:12px system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial;fill:#9fb0c3}
+                .ticks{font:11px system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial}
+              </style>
+            </defs>
+            <g transform="translate(350,102)">
+              <path d="M -39,-68 A 78 78 0 1 1 -39,68" fill="none" stroke="#213047" stroke-width="14" stroke-linecap="round"/>
+              <path d="M -39,-68 A 78 78 0 1 1 -39,68" fill="none" stroke="url(#g-arc-r)" stroke-width="14" stroke-linecap="round" filter="url(#soft-r)"/>
+              <g id="rm-scale">
+                <g id="rm-t1" transform="rotate(-96)"><line x1="80" y1="0" x2="90" y2="0" stroke="#334155" stroke-width="2"/><text class="ticks" x="96" y="3" fill="#9fb0c3">1</text></g>
+                <g id="rm-t2" transform="rotate(-72)"><line x1="80" y1="0" x2="90" y2="0" stroke="#334155" stroke-width="2"/><text class="ticks" x="96" y="3" fill="#9fb0c3">2</text></g>
+                <g id="rm-t3" transform="rotate(-48)"><line x1="80" y1="0" x2="90" y2="0" stroke="#334155" stroke-width="2"/><text class="ticks" x="96" y="3" fill="#9fb0c3">3</text></g>
+                <g id="rm-t4" transform="rotate(-24)"><line x1="80" y1="0" x2="90" y2="0" stroke="#334155" stroke-width="2"/><text class="ticks" x="96" y="3" fill="#9fb0c3">4</text></g>
+                <g id="rm-t5" transform="rotate(0)"><line x1="80" y1="0" x2="90" y2="0" stroke="#334155" stroke-width="2"/><text class="ticks" x="96" y="3" fill="#9fb0c3">5</text></g>
+                <g id="rm-t6" transform="rotate(24)"><line x1="80" y1="0" x2="90" y2="0" stroke="#334155" stroke-width="2"/><text class="ticks" x="96" y="3" fill="#9fb0c3">6</text></g>
+                <g id="rm-t7" transform="rotate(48)"><line x1="80" y1="0" x2="90" y2="0" stroke="#334155" stroke-width="2"/><text class="ticks" x="96" y="3" fill="#9fb0c3">7</text></g>
+                <g id="rm-t8" transform="rotate(72)"><line x1="80" y1="0" x2="90" y2="0" stroke="#334155" stroke-width="2"/><text class="ticks" x="96" y="3" fill="#9fb0c3">8</text></g>
+                <g id="rm-t9" transform="rotate(96)"><line x1="80" y1="0" x2="90" y2="0" stroke="#334155" stroke-width="2"/><text class="ticks" x="96" y="3" fill="#9fb0c3">9</text></g>
+                <g id="rm-t10" transform="rotate(120)"><line x1="80" y1="0" x2="90" y2="0" stroke="#334155" stroke-width="2"/><text class="ticks" x="96" y="3" fill="#9fb0c3">10</text></g>
+              </g>
+              <g id="rm-needle" transform="rotate(-120)"><path d="M -3,0 L 84,0 L 0,-1 Z" fill="#e6edf3"/></g>
+              <!-- NUMBER ABOVE NEEDLE; colour set by JS -->
+              <text id="rm-value" class="rm-center" x="0" y="10" text-anchor="middle">0.0</text>
+            </g>
+            <text id="rm-band" class="rm-band" x="50%" y="210" text-anchor="middle">—</text>
+          </svg>
+        </div>
+      </div>
+      <div class="g4" style="display:flex;align-items:flex-end">
+        <button id="syncBtn" class="primary" style="width:100%">Submit review</button>
+      </div>
+    </div>
   </div>
 </div>
 
+<div id="toast" class="toast">Synced!</div>
+
 <script>
-document.getElementById('date').value=new Date().toISOString().slice(0,10);
+const ENDPOINT='https://api.sheetbest.com/sheets/9707a268-edd0-4f09-afe3-3f430786e8e2';
+const APIKEY='';
+const CATS=[
+  {key:'Food',label:'Food · 60%',w:0.60,help:'Technique, flavour clarity, balance, execution'},
+  {key:'Service',label:'Service · 10%',w:0.10,help:'Warmth, timing, product knowledge, problem-solving'},
+  {key:'Ambience',label:'Ambience · 10%',w:0.10,help:'Comfort, acoustics, lighting, character'},
+  {key:'Drinks',label:'Drinks · 10%',w:0.10,help:'Breadth, curation, pairing, pricing'},
+  {key:'Value',label:'Value · 10%',w:0.10,help:'Price fairness vs quality and experience'}
+];
+const DESCR={Food:{10:'Cooking to dream about for years.',9:'Exact, assured; flavours sing clearly.',8:'Characterful, inventive dishes that land.',7:'Good cooking with the odd wobble.',6:'Capable, cautious, soon forgotten.',5:'Patchy cooking; seasoning ropey.',4:'Sloppy edges; muddled, wandering flavours.',3:'Technique falters often.',2:'Errors dominate; appetite dwindles.',1:'Misses the point entirely.'},Service:{10:'Seamless, discreet perfection.',9:'Pacing right; the room understood.',8:'Warm, alert; fixes made swiftly.',7:'Pleasant and mostly punctual.',6:'Functional, but nobody steering.',5:'Inconsistent; you’re kept waiting.',4:'Orders muddled; attention slips away.',3:'Slow, distracted; hard to get attention.',2:'Errors stack up; timing collapses.',1:'Indifferent, edging towards rude.'},Ambience:{10:'Feels like it was made for us.',9:'Cohesive, calm, comfortably lit.',8:'Thoughtful touches; the space breathes.',7:'Pleasant, if a touch anonymous.',6:'Serviceable, short on charm.',5:'Tight tables or swelling noise.',4:'Glare, echo, draughts distract throughout.',3:'Drab but adequate.',2:'Scuffed, tired, a little harsh.',1:'Actively unpleasant.'},Drinks:{10:'Exceptional list; pairings lift everything.',9:'Range with restraint; prices make sense.',8:'Good spread; choices feel considered.',7:'Decent selection but expensive.',6:'Short but workable.',5:'Narrow list or awkward pricing.',4:'Thin options; pairing feels guessed.',3:'Little here you actually want.',2:'Off-key and overpriced.',1:'Dire selection.'},Value:{10:'Remarkable for the money.',9:'Priced properly for what’s delivered.',8:'A little high, still fine.',7:'Good, but a couple of rip-off items.',6:'Cost outruns experience.',5:'Mixed value; a few winces.',4:'Often dearer than peers.',3:'The bill stings; joy doesn’t.',2:'Very bad value.',1:'Not worth even coming here.'}};
+const scores={}; const $=id=>document.getElementById(id); const n=x=>Number(x)||0;
 
-const cfgKey='sheetbest_cfg_debug_live';
-function log(msg){const el=document.getElementById('log');el.textContent=(typeof msg==='string')?msg:JSON.stringify(msg,null,2);}
-
-function saveCfg(){
-  localStorage.setItem(cfgKey, JSON.stringify({
-    endpoint:document.getElementById('endpoint').value.trim(),
-    apikey:document.getElementById('apikey').value.trim()
-  }));
-  log('Config saved');
+function lerp(a,b,t){return Math.round(a+(b-a)*t)}
+function blend(c1,c2,t){const a=[parseInt(c1.slice(1,3),16),parseInt(c1.slice(3,5),16),parseInt(c1.slice(5,7),16)];const b=[parseInt(c2.slice(1,3),16),parseInt(c2.slice(3,5),16),parseInt(c2.slice(5,7),16)];const r=lerp(a[0],b[0],t),g=lerp(a[1],b[1],t),bl=lerp(a[2],b[2],t);return `rgb(${r},${g},${bl})`;}
+function ratingColor(score){const t=Math.max(0,Math.min(1,score/10));return (t<=0.5)?blend('#ef4444','#f59e0b',t/0.5):blend('#f59e0b','#10b981',(t-0.5)/0.5);}
+function colorScale(prefix){for(let i=1;i<=10;i++){const g=document.getElementById(`${prefix}-t${i}`);if(!g) continue;const col=ratingColor(i);const ln=g.querySelector('line'); if(ln) ln.setAttribute('stroke', col);const tx=g.querySelector('text'); if(tx) tx.setAttribute('fill', col);}}
+function bandFor(o){return (o>=9.5)?'Elite by any measure':(o>=8.5)?'Outstanding; destination dining':(o>=7.5)?'Excellent; a clear standout':(o>=6.5)?'Good':(o>=5.0)?'Mixed':(o>=2.5)?'Poor':'Tragic';}
+function toast(msg, ms=1600){const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._tid); if(ms>0){ t._tid=setTimeout(()=>t.classList.remove('show'), ms); }}
+function toastStep(msg, ms){ return new Promise(res=>{ toast(msg, ms); setTimeout(res, ms); }); }
+function setRestaurantometer(score){const deg=-120+(Math.max(0,Math.min(10,score))*24);const n=document.getElementById('rto-needle'); if(n) n.setAttribute('transform', `rotate(${deg})`);}
+function setResultmeter(score){
+  const deg=-120+(Math.max(0,Math.min(10,score))*24);
+  const n=document.getElementById('rm-needle'); if(n) n.setAttribute('transform', `rotate(${deg})`);
+  const v=document.getElementById('rm-value'); if(v){ v.textContent=Number(score).toFixed(1); v.style.fill = ratingColor(score); } // <-- inline style wins
+  const rb=document.getElementById('rm-band'); if(rb) rb.textContent=bandFor(score);
 }
-function loadCfg(){
-  try{
-    const c=JSON.parse(localStorage.getItem(cfgKey)||'{}');
-    document.getElementById('endpoint').value=c.endpoint||'';
-    document.getElementById('apikey').value=c.apikey||'';
-  }catch(e){}
+function updateOverall(){
+  let total=0; CATS.forEach(c=> total+=n(scores[c.key])*c.w );
+  const o=Math.round(total*10)/10;
+  $('overall').textContent=o.toFixed(1);
+  $('band').textContent=bandFor(o);
+  setRestaurantometer(o); setResultmeter(o);
 }
-loadCfg();
-
-function gatherRow(){
-  return {
-    Timestamp: new Date().toISOString(),
-    Date: document.getElementById('date').value,
-    Restaurant: document.getElementById('restaurant').value.trim(),
-    City: document.getElementById('city').value.trim(),
-    Reviewer: document.getElementById('reviewer').value.trim(),
-    // scores are optional for this debug; main app sends them
-    Food:'', Service:'', Ambience:'', Drinks:'', Value:'', Consistency:'',
-    Overall:'', Band:'', Notes: document.getElementById('notes').value.trim(),
-    UserAgent: navigator.userAgent
-  };
+function mkChips(cat){
+  const wrap=document.createElement('div');
+  wrap.className='card'; wrap.style.padding='12px'; wrap.style.margin='10px 0';
+  wrap.innerHTML=`<div class="grid">
+    <div class="g12"><strong>${cat.label}</strong></div>
+    <div class="g12 mut" id="help-${cat.key}">${cat.help}</div>
+    <div class="g12 chips" id="chips-${cat.key}"></div>
+    <div class="g12 desc" id="desc-${cat.key}"></div>
+    <div class="g12 req" id="req-${cat.key}" style="display:none">Please select a score (1–10).</div>
+  </div>`;
+  const row=wrap.querySelector('#chips-'+cat.key);
+  const descEl=wrap.querySelector('#desc-'+cat.key);
+  const reqEl=wrap.querySelector('#req-'+cat.key);
+  for(let i=10;i>=1;i--){
+    const b=document.createElement('button');
+    b.className='chip'; b.textContent=String(i); b.setAttribute('aria-pressed','false');
+    b.addEventListener('click',()=>{
+      scores[cat.key]=i;
+      [...row.children].forEach(x=>x.setAttribute('aria-pressed','false'));
+      b.setAttribute('aria-pressed','true');
+      const txt=(DESCR[cat.key] && DESCR[cat.key][i]!=null)?DESCR[cat.key][i]:'';
+      descEl.textContent=txt; descEl.style.color=ratingColor(i);
+      row.classList.remove('error'); reqEl.style.display='none';
+      updateOverall();
+    });
+    row.appendChild(b);
+  }
+  return wrap;
 }
-
-async function testGet(){
-  const {endpoint}=JSON.parse(localStorage.getItem(cfgKey)||'{}');
-  if(!endpoint) return log('Missing endpoint');
-  try{
-    const res=await fetch(endpoint);
-    const text=await res.text();
-    log({when:'GET', status:res.status, ok:res.ok, response:text.slice(0,500)});
-  }catch(e){ log({when:'GET', error:String(e)}); }
+function buildCats(){const root=$('cats'); root.innerHTML=''; CATS.forEach(c=>root.appendChild(mkChips(c))); }
+function clearForm(){
+  ['restaurant','city','reviewer','notes'].forEach(id=>$(id).value='');
+  $('date').value=new Date().toISOString().slice(0,10);
+  for(const k in scores) delete scores[k];
+  buildCats();
+  $('overall').textContent='0.0'; $('band').textContent='—';
+  setRestaurantometer(0); setResultmeter(0);
 }
-
+function missingCategories(){ return CATS.filter(c => !(c.key in scores)); }
+function showMissing(miss){
+  miss.forEach(c=>{ const row=$('chips-'+c.key), req=$('req-'+c.key); if(row) row.classList.add('error'); if(req) req.style.display='block'; });
+  const first = $('chips-'+miss[0].key); if(first){ first.scrollIntoView({behavior:'smooth', block:'center'}); }
+}
+function rowPayload(){ return [{
+  Timestamp:new Date().toISOString(), Date:$('date').value,
+  Restaurant:$('restaurant').value.trim(), City:$('city').value.trim(),
+  Reviewer:$('reviewer').value.trim(),
+  Food:n(scores.Food), Service:n(scores.Service), Ambience:n(scores.Ambience), Drinks:n(scores.Drinks), Value:n(scores.Value),
+  Overall:Number($('overall').textContent), Band:$('band').textContent,
+  Notes:$('notes').value.trim(), UserAgent:navigator.userAgent
+}];}
 async function sync(){
-  const {endpoint, apikey}=JSON.parse(localStorage.getItem(cfgKey)||'{}');
-  if(!endpoint) return log('Missing endpoint');
-  const headers={'Content-Type':'application/json'};
-  if(apikey){ headers['X-API-KEY']=apikey; headers['Authorization']='Bearer '+apikey; }
-  const body=[gatherRow()];
+  const btn=$('syncBtn');
+  const miss = missingCategories();
+  if(miss.length){ toast('Please score all categories', 1400); showMissing(miss); return; }
+  const headers={'Content-Type':'application/json'}; if(APIKEY){headers['X-API-KEY']=APIKEY; headers['Authorization']='Bearer '+APIKEY;}
+  btn.disabled=true; btn.textContent='Submitting…'; toast('Thanks for your review', 1200);
   try{
-    const res=await fetch(endpoint,{method:'POST',headers,body:JSON.stringify(body)});
-    const text=await res.text();
-    log({when:'POST', status:res.status, ok:res.ok, response:text});
-  }catch(e){ log({when:'POST', error:String(e)}); }
+    const r=await fetch(ENDPOINT,{method:'POST',headers,body:JSON.stringify(rowPayload())});
+    if(r.ok){ await toastStep('Saved', 1100); await toastStep('Clearing form…', 900); clearForm(); }
+    else{ alert('Sync failed: '+r.status); }
+  }catch(e){ alert('Network error'); }
+  finally{ btn.disabled=false; btn.textContent='Submit review'; }
 }
-
-document.getElementById('saveCfg').addEventListener('click',saveCfg);
-document.getElementById('testBtn').addEventListener('click',testGet);
-document.getElementById('syncBtn').addEventListener('click',sync);
+$('date').value=new Date().toISOString().slice(0,10);
+buildCats(); updateOverall();
+(function(){ // colourise tick scales on load
+  for(const p of ['rto','rm']) colorScale(p);
+})();
+document.getElementById('syncBtn').addEventListener('click', sync);
 </script>
+
+<div id="toast" class="toast">Synced!</div>
 </body>
 </html>
