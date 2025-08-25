@@ -1,4 +1,4 @@
-<!-- build: ui18 (no centre dot; reliable coloured score; coloured tick scales; Food60/others10; 1–10 only; toasts; submit + clear) -->
+<!-- build: ui19 (Food-9 copy tweak; no centre dot; reliable coloured score; coloured tick scales; Food60/others10; 1–10 only; toasts; submit + clear) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -23,7 +23,7 @@
   .g12{grid-column:span 12}.g8{grid-column:span 8}.g6{grid-column:span 6}.g4{grid-column:span 4}.g3{grid-column:span 3}
   @media(max-width:860px){.g8,.g6,.g4,.g3{grid-column:span 12}}
 
-  /* Score chips: 10 across on wide; 5×2 on small */
+  /* Score chips */
   .chips{display:grid;grid-template-columns:repeat(10,1fr);gap:8px;align-items:center;padding:2px;border-radius:12px}
   @media(max-width:540px){.chips{grid-template-columns:repeat(5,1fr)}}
   .chip{display:inline-flex;align-items:center;justify-content:center;width:100%;height:42px;border:1px solid var(--line);border-radius:10px;background:var(--chip);color:var(--ink);cursor:pointer;transition:.12s}
@@ -41,7 +41,6 @@
   button.primary{border-color:var(--accent)}
   button[disabled]{opacity:.6;cursor:not-allowed}
 
-  /* Toast */
   .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);
          background:#0f1f16;border:1px solid #183f31;color:#c7ffdf;padding:10px 14px;border-radius:10px;opacity:0;transition:.2s}
   .toast.show{opacity:1}
@@ -75,7 +74,7 @@
           <path d="M -39,-68 A 78 78 0 1 1 -39,68" fill="none" stroke="#213047" stroke-width="14" stroke-linecap="round"/>
           <path d="M -39,-68 A 78 78 0 1 1 -39,68" fill="none" stroke="url(#g-arc)" stroke-width="14" stroke-linecap="round" filter="url(#soft)"/>
 
-          <!-- colourised tick scale -->
+          <!-- colourised tick scale (JS will tint labels/lines) -->
           <g id="rto-scale">
             <g id="rto-t1"  transform="rotate(-96)"><line x1="80" y1="0" x2="90" y2="0" stroke="#334155" stroke-width="2"/><text class="ticks" x="96" y="3"  fill="#9fb0c3">1</text></g>
             <g id="rto-t2"  transform="rotate(-72)"><line x1="80" y1="0" x2="90" y2="0" stroke="#334155" stroke-width="2"/><text class="ticks" x="96" y="3"  fill="#9fb0c3">2</text></g>
@@ -89,7 +88,7 @@
             <g id="rto-t10" transform="rotate(120)"><line x1="80" y1="0" x2="90" y2="0"  stroke="#334155" stroke-width="2"/><text class="ticks" x="96" y="3"  fill="#9fb0c3">10</text></g>
           </g>
 
-          <!-- needle: hollow centre (starts at r=16px, so no overlap with 0,0) -->
+          <!-- needle: hollow centre (starts at r=16px) -->
           <g id="rto-needle" transform="rotate(-120)"><path d="M 16,-1 L 88,0 L 16,1 Z" fill="#e6edf3"/></g>
         </g>
 
@@ -130,7 +129,7 @@
                 <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#000" flood-opacity="0.35"/>
               </filter>
               <style>
-                .rm-center{font:700 26px system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial} /* no fixed fill */
+                .rm-center{font:700 26px system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial}
                 .rm-band{font:12px system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial;fill:#9fb0c3}
                 .ticks{font:11px system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial}
               </style>
@@ -188,12 +187,11 @@ const CATS=[
   {key:'Value',label:'Value · 10%',w:0.10,help:'Price fairness vs quality and experience'}
 ];
 
-/* Descriptors (10→1) */
+/* Descriptors (Food 9 tweaked) */
 const DESCR={
-  Food:{10:'Cooking to dream about for years.',9:'Near to perfection; amazing flavours snd presentation.',8:'Characterful, inventive dishes.',7:'Good cooking with the odd wobble.',6:'Capable, cautious, soon forgotten.',5:'Patchy cooking; seasoning ropey.',4:'Sloppy edges; muddled, wandering flavours.',3:'Technique falters often.',2:'Errors dominate; appetite dwindles.',1:'Misses the point entirely.'},
+  Food:{10:'Cooking to dream about for years.',9:'Near-perfect; bright, balanced flavours.',8:'Characterful, inventive dishes that land.',7:'Good cooking with the odd wobble.',6:'Capable, cautious, soon forgotten.',5:'Patchy cooking; seasoning ropey.',4:'Sloppy edges; muddled, wandering flavours.',3:'Technique falters often.',2:'Errors dominate; appetite dwindles.',1:'Misses the point entirely.'},
   Service:{10:'Seamless, discreet perfection.',9:'Pacing right; the room understood.',8:'Warm, alert; fixes made swiftly.',7:'Pleasant and mostly punctual.',6:'Functional, but nobody steering.',5:'Inconsistent; you’re kept waiting.',4:'Orders muddled; attention slips away.',3:'Slow, distracted; hard to get attention.',2:'Errors stack up; timing collapses.',1:'Indifferent, edging towards rude.'},
-  Ambience:{10:'Feels like it was made for us.',9:'Cohesive, calm, comfortably lit.',8:'Thoughtful touches.',7:'Pleasa
-    nt, slightly impersonal.',6:'Serviceable, short on charm.',5:'Tight tables or swelling noise.',4:'Glare, echo, draughts distract throughout.',3:'Drab but adequate.',2:'Scuffed, tired, a little harsh.',1:'Actively unpleasant.'},
+  Ambience:{10:'Feels like it was made for us.',9:'Cohesive, calm, comfortably lit.',8:'Thoughtful touches; the space breathes.',7:'Pleasant, if a touch anonymous.',6:'Serviceable, short on charm.',5:'Tight tables or swelling noise.',4:'Glare, echo, draughts distract throughout.',3:'Drab but adequate.',2:'Scuffed, tired, a little harsh.',1:'Actively unpleasant.'},
   Drinks:{10:'Exceptional list; pairings lift everything.',9:'Range with restraint; prices make sense.',8:'Good spread; choices feel considered.',7:'Decent selection but expensive.',6:'Short but workable.',5:'Narrow list or awkward pricing.',4:'Thin options; pairing feels guessed.',3:'Little here you actually want.',2:'Off-key and overpriced.',1:'Dire selection.'},
   Value:{10:'Remarkable for the money.',9:'Priced properly for what’s delivered.',8:'A little high, still fine.',7:'Good, but a couple of rip-off items.',6:'Cost outruns experience.',5:'Mixed value; a few winces.',4:'Often dearer than peers.',3:'The bill stings; joy doesn’t.',2:'Very bad value.',1:'Not worth even coming here.'}
 };
@@ -244,8 +242,8 @@ function setResultmeter(score){
   const col=ratingColor(score);
   if(v){
     v.textContent=Number(score).toFixed(1);
-    v.style.fill=col;                 // inline style (wins in most engines)
-    v.setAttribute('fill', col);      // attribute fallback (Safari/Edge quirks)
+    v.style.fill=col;
+    v.setAttribute('fill', col);
   }
   const rb=document.getElementById('rm-band'); if(rb) rb.textContent=bandFor(score);
 }
@@ -345,7 +343,6 @@ async function sync(){
 /* Init */
 $('date').value=new Date().toISOString().slice(0,10);
 buildCats(); updateOverall(); setRestaurantometer(0); setResultmeter(0);
-/* Colourise scales on load (header + result) */
 colorScale('rto'); colorScale('rm');
 
 document.getElementById('syncBtn').addEventListener('click', sync);
