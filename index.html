@@ -1,20 +1,19 @@
-<!-- build: ui13 (no zero option; 10→1; mobile 5×2; Food60/others10; robust reset) -->
+<!-- build: ui15 (Restaurantometer; 1–10 only; mobile 5×2; Food60/others10; robust reset + toasts; required scoring with red nudges) -->
 <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Restaurant'O'Meter</title>
+<title>Restaurantometer</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <style>
-  :root{--bg:#0b1022;--card:#0f172a;--ink:#e6edf3;--mut:#9fb0c3;--line:#213047;--accent:#10b981;--chip:#0a1122}
+  :root{--bg:#0b1022;--card:#0f172a;--ink:#e6edf3;--mut:#9fb0c3;--line:#213047;--accent:#10b981;--chip:#0a1122;--red:#ef4444}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font:16px system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial}
   .wrap{max-width:1100px;margin:24px auto;padding:0 16px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
-  h1{margin:0 0 6px;font-size:24px}
   h2{margin:18px 0 8px;font-size:16px;color:var(--mut)}
   label{display:block;margin:8px 0 4px}
   input,textarea,button{font:inherit}
@@ -25,7 +24,7 @@
   @media(max-width:860px){.g8,.g6,.g4,.g3{grid-column:span 12}}
 
   /* Score chips: 10 across on wide; 5×2 on small */
-  .chips{display:grid;grid-template-columns:repeat(10,1fr);gap:8px;align-items:center}
+  .chips{display:grid;grid-template-columns:repeat(10,1fr);gap:8px;align-items:center;padding:2px;border-radius:12px}
   @media(max-width:540px){.chips{grid-template-columns:repeat(5,1fr)}}
   .chip{
     display:inline-flex;align-items:center;justify-content:center;width:100%;height:42px;
@@ -38,6 +37,9 @@
 
   .mut{color:var(--mut);font-size:14px}
   .desc{font-weight:700;margin-top:4px}
+  .req{margin-top:4px;font-size:13px;color:var(--red);font-weight:700}
+  .chips.error{outline:2px solid var(--red);outline-offset:2px}
+
   .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
   button{border:1px solid var(--line);background:var(--chip);color:var(--ink);padding:10px 14px;border-radius:10px;cursor:pointer}
   button.primary{border-color:var(--accent)}
@@ -60,7 +62,41 @@
 <body>
 <div class="wrap">
   <div class="card">
-    <h1>Restaurant-Review-Ometer</h1>
+
+    <!-- Restaurantometer logo -->
+    <div class="logo-wrap" style="margin:0 0 8px">
+      <svg id="restaurantometer" viewBox="0 0 700 180" role="img" aria-labelledby="logoTitle" width="100%" height="auto">
+        <title id="logoTitle">Restaurantometer</title>
+        <defs>
+          <linearGradient id="g-arc" x1="210" y1="0" x2="490" y2="0" gradientUnits="userSpaceOnUse">
+            <stop offset="0%"  stop-color="#ef4444"/>
+            <stop offset="50%" stop-color="#f59e0b"/>
+            <stop offset="100%" stop-color="#10b981"/>
+          </linearGradient>
+          <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#000" flood-opacity="0.35"/>
+          </filter>
+          <style>
+            .rto-label{font:700 28px/1.1 system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial,sans-serif;letter-spacing:.5px;fill:#e6edf3}
+            .rto-sub{font:12px system-ui,-apple-system,Segoe UI,Inter,Roboto,Arial,sans-serif;fill:#9fb0c3}
+          </style>
+        </defs>
+
+        <!-- dial -->
+        <g transform="translate(350,92)">
+          <path d="M -39,-68 A 78 78 0 1 1 -39,68" fill="none" stroke="#213047" stroke-width="14" stroke-linecap="round"/>
+          <path d="M -39,-68 A 78 78 0 1 1 -39,68" fill="none" stroke="url(#g-arc)" stroke-width="14" stroke-linecap="round" filter="url(#soft)"/>
+          <!-- needle -->
+          <g id="rto-needle" transform="rotate(-120)">
+            <path d="M -3,0 L 84,0 L 0,-1 Z" fill="#e6edf3"/>
+            <circle cx="0" cy="0" r="6" fill="#e6edf3"/>
+          </g>
+        </g>
+
+        <text x="50%" y="160" text-anchor="middle" class="rto-label">Restaurantometer</text>
+        <text x="50%" y="174" text-anchor="middle" class="rto-sub">Food-led dining score, at a glance</text>
+      </svg>
+    </div>
 
     <div class="grid" style="margin-top:10px">
       <div class="g6"><label>Restaurant</label><input id="restaurant" placeholder="e.g., Test Bistro"></div>
@@ -95,7 +131,7 @@
 <div id="toast" class="toast">Synced!</div>
 
 <script>
-/* Hard-coded endpoint */
+/* Endpoint (hard-coded) */
 const ENDPOINT='https://api.sheetbest.com/sheets/9707a268-edd0-4f09-afe3-3f430786e8e2';
 const APIKEY='';
 
@@ -108,73 +144,73 @@ const CATS=[
   {key:'Value',label:'Value · 10%',w:0.10,help:'Price fairness vs quality and experience'}
 ];
 
-/* Descriptors (1–10 only; no zero option) */
+/* Descriptors (10→1, UK voice) */
 const DESCR={
   Food:{
-    10:'Unforgettable: Last Supper territory, something you will talk about for years',
-     9:'Outstanding: full of passion, precision, excitement.',
-     8:'Excellent: creative, balanced, dishes that delight.',
-     7:'Impressive: clear skill, flavours that stand out',
-     6:'Tasty: well made, enjoyable',
-     5:'Honest: straightforward, gets the job done',
-     4:'Boring: safe and predictable, lacks spark',
-     3:'Poor: edible but bland, no real skill',
-     2:'Dreadful: clumsy, careless, no pleasure in eating',
-     1:'Dire: badly cooked, shouldn’t be served'
+    10:'Cooking to dream about for years.',
+     9:'Exact, assured; flavours sing clearly.',
+     8:'Characterful, inventive dishes that land.',
+     7:'Good cooking with the odd wobble.',
+     6:'Capable, cautious, soon forgotten.',
+     5:'Patchy cooking; seasoning ropey.',
+     4:'Sloppy edges; muddled, wandering flavours.',
+     3:'Technique falters often.',
+     2:'Errors dominate; appetite dwindles.',
+     1:'Misses the point entirely.'
   },
   Service:{
-    10:'Brilliant: unobtrusive service that lifts the whole experience.',
-     9:'Great: natural, intuitive, makes the night flow',
-     8:'Helpful: good suggestions, small thoughtful touches',
-     7:'Smooth: confident, good timing, feels relaxed',
-     6:'Friendly: warm, attentive, knows the menu',
-     5:'Functional: the basics done, nothing more',
-     4:'Flat: polite but lifeless',
-     3:'Slack: careless, repeated mistakes',
-     2:'Chaotic: lost, slow, visibly untrained',
-     1:'Rude: actively unpleasant'
+    10:'Seamless, discreet perfection.',
+     9:'Pacing right; the room understood.',
+     8:'Warm, alert; fixes made swiftly.',
+     7:'Pleasant and mostly punctual.',
+     6:'Functional, but nobody steering.',
+     5:'Inconsistent; you’re kept waiting.',
+     4:'Orders muddled; attention slips away.',
+     3:'Slow, distracted; hard to get attention.',
+     2:'Errors stack up; timing collapses.',
+     1:'Indifferent, edging towards rude.'
   },
   Ambience:{
-    10:'Special: a setting that becomes part of the memory',
-     9:'Lovely: atmosphere adds real joy to the night',
-     8:'Characterful: charm and individuality',
-     7:'Attractive: stylish, feels good to be in',
-     6:'Pleasant: comfortable, easy to enjoy',
-     5:'Forgettable: neat but generic, doesn’t stick with you',
-     4:'Basic: tidy but uninspired',
-     3:'Dull: plain, no personality',
-     2:'Harsh: cramped, noisy, uncomfortable',
-     1:'Awful: dirty, oppressive, or chaotic'
+    10:'Feels like it was made for us.',
+     9:'Cohesive, calm, comfortably lit.',
+     8:'Thoughtful touches; the space breathes.',
+     7:'Pleasant, if a touch anonymous.',
+     6:'Serviceable, short on charm.',
+     5:'Tight tables or swelling noise.',
+     4:'Glare, echo, draughts distract throughout.',
+     3:'Drab but adequate.',
+     2:'Scuffed, tired, a little harsh.',
+     1:'Actively unpleasant.'
   },
   Drinks:{
-    10:'Fantastic: list that excites — brilliant wines, local treasures, fair mark-ups, options for all tastes',
-     9:'Great: mix of classics and local gems, fair pricing',
-     8:'Excellent: thoughtful list, some discoveries, good by-the-glass',
-     7:'Strong: well-chosen, fair value, interesting variety',
-     6:'Good: balanced, reliable, honest mark-ups',
-     5:'Decent: everyday options, fair prices',
-     4:'Basic: workable list, covers the essentials',
-     3:'Poor: narrow, generic, uninspired',
-     2:'Dire: thin list, poor quality, overpriced',
-     1:'Rip-off: bad choices, silly mark-ups'
+    10:'Exceptional list; pairings lift everything.',
+     9:'Range with restraint; prices make sense.',
+     8:'Good spread; choices feel considered.',
+     7:'Decent selection but expensive.',
+     6:'Short but workable.',
+     5:'Narrow list or awkward pricing.',
+     4:'Thin options; pairing feels guessed.',
+     3:'Little here you actually want.',
+     2:'Off-key and overpriced.',
+     1:'Dire selection.'
   },
   Value:{
-    10:'Spot-on: bill feels completely right, maybe even generous',
-     9:'Great value: delivers more than expected',
-     8:'Very good: feels generous for the quality',
-     7:'Good: you leave happy with the spend',
-     6:'Fair: matches expectations, no sting',
-     5:'Reasonable: fair, nothing generous',
-     4:'Unbalanced: OK meal, not worth the price',
-     3:'Disappointing: food fine, bill unfair',
-     2:'Very poor: inflated cost, weak return',
-     1:'Insulting: outrageous for what’s delivered'
+    10:'Remarkable for the money.',
+     9:'Priced properly for what’s delivered.',
+     8:'A little high, still fine.',
+     7:'Good, but a couple of rip-off items.',
+     6:'Cost outruns experience.',
+     5:'Mixed value; a few winces.',
+     4:'Often dearer than peers.',
+     3:'The bill stings; joy doesn’t.',
+     2:'Very bad value.',
+     1:'Not worth even coming here.'
   }
 };
 
 const scores={}; const $=id=>document.getElementById(id); const n=x=>Number(x)||0;
 
-/* Colour helper: red→amber→green single tone */
+/* Colour: red→amber→green single tone */
 function lerp(a,b,t){return Math.round(a+(b-a)*t)}
 function blend(c1,c2,t){const a=[parseInt(c1.slice(1,3),16),parseInt(c1.slice(3,5),16),parseInt(c1.slice(5,7),16)];
   const b=[parseInt(c2.slice(1,3),16),parseInt(c2.slice(3,5),16),parseInt(c2.slice(5,7),16)];
@@ -199,7 +235,24 @@ function toast(msg, ms=1600){
 }
 function toastStep(msg, ms){ return new Promise(res=>{ toast(msg, ms); setTimeout(res, ms); }); }
 
-/* Build category sections */
+/* Restaurantometer needle: map 0–10 → -120…+120° */
+function setRestaurantometer(score){
+  const deg = -120 + (Math.max(0, Math.min(10, score)) * 24);
+  const n = document.getElementById('rto-needle');
+  if(n) n.setAttribute('transform', `rotate(${deg})`);
+}
+
+/* Overall calc */
+function updateOverall(){
+  let total=0; CATS.forEach(c=> total+=n(scores[c.key])*c.w );
+  const o=Math.round(total*10)/10;
+  $('overall').textContent=o.toFixed(1);
+  $('band').textContent=bandFor(o);
+  const bar=$('bar'); bar.value=o; bar.style.setProperty('--bar-color', ratingColor(o));
+  setRestaurantometer(o);
+}
+
+/* Build each category block */
 function mkChips(cat){
   const wrap=document.createElement('div');
   wrap.className='card'; wrap.style.padding='12px'; wrap.style.margin='10px 0';
@@ -208,10 +261,12 @@ function mkChips(cat){
     <div class="g12 mut" id="help-${cat.key}">${cat.help}</div>
     <div class="g12 chips" id="chips-${cat.key}"></div>
     <div class="g12 desc" id="desc-${cat.key}"></div>
+    <div class="g12 req" id="req-${cat.key}" style="display:none">Please select a score (1–10).</div>
   </div>`;
   const row=wrap.querySelector('#chips-'+cat.key);
   const descEl=wrap.querySelector('#desc-'+cat.key);
-  for(let i=10;i>=1;i--){  /* 10 → 1 (no zero) */
+  const reqEl=wrap.querySelector('#req-'+cat.key);
+  for(let i=10;i>=1;i--){ /* 10→1, no zero */
     const b=document.createElement('button');
     b.className='chip'; b.textContent=String(i); b.setAttribute('aria-pressed','false');
     b.addEventListener('click',()=>{
@@ -221,6 +276,8 @@ function mkChips(cat){
       const txt=(DESCR[cat.key] && DESCR[cat.key][i]!=null)?DESCR[cat.key][i]:'';
       descEl.textContent=txt;
       descEl.style.color=ratingColor(i);
+      // clear any warning on selection
+      row.classList.remove('error'); reqEl.style.display='none';
       updateOverall();
     });
     row.appendChild(b);
@@ -242,18 +299,27 @@ function clearForm(){
   $('overall').textContent='0.0';
   $('bar').value=0;
   $('band').textContent='—';
+  setRestaurantometer(0);
 }
 
-/* Compute overall */
-function updateOverall(){
-  let total=0; CATS.forEach(c=> total+=n(scores[c.key])*c.w );
-  const o=Math.round(total*10)/10;
-  $('overall').textContent=o.toFixed(1);
-  $('band').textContent=bandFor(o);
-  const bar=$('bar'); bar.value=o; bar.style.setProperty('--bar-color', ratingColor(o));
+/* Validation: ensure every category scored */
+function missingCategories(){
+  return CATS.filter(c => !(c.key in scores));
+}
+function showMissing(miss){
+  if(!miss.length) return;
+  // show red nudge and outline on each missing category
+  miss.forEach(c=>{
+    const row=$('chips-'+c.key), req=$('req-'+c.key);
+    if(row){ row.classList.add('error'); }
+    if(req){ req.style.display='block'; }
+  });
+  // scroll to first missing
+  const first = $('chips-'+miss[0].key);
+  if(first){ first.scrollIntoView({behavior:'smooth', block:'center'}); }
 }
 
-/* Prepare payload */
+/* Payload */
 function rowPayload(){
   return [{
     Timestamp:new Date().toISOString(),
@@ -270,9 +336,18 @@ function rowPayload(){
   }];
 }
 
-/* Submit with thanks → saved → clearing → reset */
+/* Submit with validation + thanks → saved → clearing → reset */
 async function sync(){
   const btn=$('syncBtn');
+
+  // Pre-flight validation BEFORE disabling the button
+  const miss = missingCategories();
+  if(miss.length){
+    toast('Please score all categories', 1400);
+    showMissing(miss);
+    return;
+  }
+
   const headers={'Content-Type':'application/json'};
   if(APIKEY){headers['X-API-KEY']=APIKEY; headers['Authorization']='Bearer '+APIKEY;}
 
@@ -297,7 +372,7 @@ async function sync(){
 
 /* Init */
 $('date').value=new Date().toISOString().slice(0,10);
-buildCats(); updateOverall();
+buildCats(); updateOverall(); setRestaurantometer(0);
 $('syncBtn').addEventListener('click', sync);
 </script>
 
