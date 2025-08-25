@@ -1,4 +1,4 @@
-<!-- build: ui12 (instant thanks → saved → clearing; reset form; Food60/others10) -->
+<!-- build: ui13 (no zero option; 10→1; mobile 5×2; Food60/others10; robust reset) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -24,8 +24,9 @@
   .g12{grid-column:span 12}.g8{grid-column:span 8}.g6{grid-column:span 6}.g4{grid-column:span 4}.g3{grid-column:span 3}
   @media(max-width:860px){.g8,.g6,.g4,.g3{grid-column:span 12}}
 
-  /* Always-visible 10→0 chips (no scroll) */
-  .chips{display:grid;grid-template-columns:repeat(11,1fr);gap:8px;align-items:center}
+  /* Score chips: 10 across on wide; 5×2 on small */
+  .chips{display:grid;grid-template-columns:repeat(10,1fr);gap:8px;align-items:center}
+  @media(max-width:540px){.chips{grid-template-columns:repeat(5,1fr)}}
   .chip{
     display:inline-flex;align-items:center;justify-content:center;width:100%;height:42px;
     border:1px solid var(--line);border-radius:10px;background:var(--chip);color:var(--ink);
@@ -33,7 +34,7 @@
   }
   .chip:hover{transform:translateY(-1px)}
   .chip[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset;background:#0e1b16}
-  @media(max-width:540px){.chips{grid-template-columns:repeat(6,1fr)}.chip{height:38px;font-size:14px}}
+  @media(max-width:540px){ .chip{height:38px;font-size:14px} }
 
   .mut{color:var(--mut);font-size:14px}
   .desc{font-weight:700;margin-top:4px}
@@ -42,7 +43,7 @@
   button.primary{border-color:var(--accent)}
   button[disabled]{opacity:.6;cursor:not-allowed}
 
-  /* Overall bar: single solid colour controlled by JS */
+  /* Overall bar: single solid colour */
   progress{
     -webkit-appearance:none;appearance:none;width:100%;height:12px;
     border:1px solid var(--line);border-radius:999px;background:#0a1122;overflow:hidden;--bar-color:#ef4444;
@@ -107,7 +108,7 @@ const CATS=[
   {key:'Value',label:'Value · 10%',w:0.10,help:'Price fairness vs quality and experience'}
 ];
 
-/* Descriptors (current set) */
+/* Descriptors (1–10 only; no zero option) */
 const DESCR={
   Food:{
     10:'Unforgettable: Last Supper territory, something you will talk about for years',
@@ -119,8 +120,7 @@ const DESCR={
      4:'Boring: safe and predictable, lacks spark',
      3:'Poor: edible but bland, no real skill',
      2:'Dreadful: clumsy, careless, no pleasure in eating',
-     1:'Dire: badly cooked, shouldn’t be served',
-     0:'Not assessed'
+     1:'Dire: badly cooked, shouldn’t be served'
   },
   Service:{
     10:'Brilliant: unobtrusive service that lifts the whole experience.',
@@ -132,8 +132,7 @@ const DESCR={
      4:'Flat: polite but lifeless',
      3:'Slack: careless, repeated mistakes',
      2:'Chaotic: lost, slow, visibly untrained',
-     1:'Rude: actively unpleasant',
-     0:'Not assessed'
+     1:'Rude: actively unpleasant'
   },
   Ambience:{
     10:'Special: a setting that becomes part of the memory',
@@ -145,8 +144,7 @@ const DESCR={
      4:'Basic: tidy but uninspired',
      3:'Dull: plain, no personality',
      2:'Harsh: cramped, noisy, uncomfortable',
-     1:'Awful: dirty, oppressive, or chaotic',
-     0:'Not assessed'
+     1:'Awful: dirty, oppressive, or chaotic'
   },
   Drinks:{
     10:'Fantastic: list that excites — brilliant wines, local treasures, fair mark-ups, options for all tastes',
@@ -158,8 +156,7 @@ const DESCR={
      4:'Basic: workable list, covers the essentials',
      3:'Poor: narrow, generic, uninspired',
      2:'Dire: thin list, poor quality, overpriced',
-     1:'Rip-off: bad choices, silly mark-ups',
-     0:'Not assessed'
+     1:'Rip-off: bad choices, silly mark-ups'
   },
   Value:{
     10:'Spot-on: bill feels completely right, maybe even generous',
@@ -171,8 +168,7 @@ const DESCR={
      4:'Unbalanced: OK meal, not worth the price',
      3:'Disappointing: food fine, bill unfair',
      2:'Very poor: inflated cost, weak return',
-     1:'Insulting: outrageous for what’s delivered',
-     0:'Not assessed'
+     1:'Insulting: outrageous for what’s delivered'
   }
 };
 
@@ -203,32 +199,6 @@ function toast(msg, ms=1600){
 }
 function toastStep(msg, ms){ return new Promise(res=>{ toast(msg, ms); setTimeout(res, ms); }); }
 
-/* Clear the form for the next review */
-function clearForm(){
-  ['restaurant','city','reviewer','notes'].forEach(id=>$(id).value='');
-  $('date').value=new Date().toISOString().slice(0,10);
-  // reset chips & descriptions
-  CATS.forEach(c=>{
-    const row=$('chips-'+c.key); if(!row) return;
-    [...row.children].forEach(b=>b.setAttribute('aria-pressed','false'));
-    const desc=$('desc-'+c.key); if(desc) desc.textContent='';
-  });
-  // reset scores and overall display
-  for(const k in scores) delete scores[k];
-  $('overall').textContent='0.0';
-  $('bar').value=0;
-  $('band').textContent='—';
-}
-
-/* Compute overall */
-function updateOverall(){
-  let total=0; CATS.forEach(c=> total+=n(scores[c.key])*c.w );
-  const o=Math.round(total*10)/10;
-  $('overall').textContent=o.toFixed(1);
-  $('band').textContent=bandFor(o);
-  const bar=$('bar'); bar.value=o; bar.style.setProperty('--bar-color', ratingColor(o));
-}
-
 /* Build category sections */
 function mkChips(cat){
   const wrap=document.createElement('div');
@@ -241,7 +211,7 @@ function mkChips(cat){
   </div>`;
   const row=wrap.querySelector('#chips-'+cat.key);
   const descEl=wrap.querySelector('#desc-'+cat.key);
-  for(let i=10;i>=0;i--){
+  for(let i=10;i>=1;i--){  /* 10 → 1 (no zero) */
     const b=document.createElement('button');
     b.className='chip'; b.textContent=String(i); b.setAttribute('aria-pressed','false');
     b.addEventListener('click',()=>{
@@ -258,7 +228,30 @@ function mkChips(cat){
   return wrap;
 }
 
-function buildCats(){const root=$('cats'); CATS.forEach(c=>root.appendChild(mkChips(c)));}
+function buildCats(){
+  const root=$('cats'); root.innerHTML='';
+  CATS.forEach(c=>root.appendChild(mkChips(c)));
+}
+
+/* Reset everything for next review */
+function clearForm(){
+  ['restaurant','city','reviewer','notes'].forEach(id=>$(id).value='');
+  $('date').value=new Date().toISOString().slice(0,10);
+  for(const k in scores) delete scores[k];
+  buildCats();
+  $('overall').textContent='0.0';
+  $('bar').value=0;
+  $('band').textContent='—';
+}
+
+/* Compute overall */
+function updateOverall(){
+  let total=0; CATS.forEach(c=> total+=n(scores[c.key])*c.w );
+  const o=Math.round(total*10)/10;
+  $('overall').textContent=o.toFixed(1);
+  $('band').textContent=bandFor(o);
+  const bar=$('bar'); bar.value=o; bar.style.setProperty('--bar-color', ratingColor(o));
+}
 
 /* Prepare payload */
 function rowPayload(){
@@ -277,7 +270,7 @@ function rowPayload(){
   }];
 }
 
-/* Submit handler with acknowledgement + clear sequence */
+/* Submit with thanks → saved → clearing → reset */
 async function sync(){
   const btn=$('syncBtn');
   const headers={'Content-Type':'application/json'};
